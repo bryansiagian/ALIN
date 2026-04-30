@@ -69,5 +69,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/assignments', [LecturerController::class, 'index']); // Memanggil fungsi index
         Route::post('/assignments', [LecturerController::class, 'store']); // Memanggil fungsi store
         Route::get('/assignments/{id}/results', [LecturerController::class, 'getResults']); // Memanggil fungsi getResults
+        Route::get('/assignments/{id}/questions', [LecturerController::class, 'getQuestions']);
     });
 });

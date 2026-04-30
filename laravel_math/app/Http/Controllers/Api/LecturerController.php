@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
+use App\Models\QuestionBank;
 use Illuminate\Http\Request;
 
 class LecturerController extends Controller
