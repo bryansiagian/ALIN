@@ -2,47 +2,33 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+    protected $fillable = ['name', 'email', 'password', 'role', 'avatar'];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    // Relasi ke Progress Belajar
+    public function progress() { return $this->hasMany(UserProgress::class); }
+
+    // Relasi ke Badge (Gamifikasi)
+    public function badges() { return $this->belongsToMany(Badge::class, 'user_badges')->withPivot('earned_at'); }
+
+    // Relasi ke Forum
+    public function threads() { return $this->hasMany(ForumThread::class); }
+
+    // Relasi ke Ujian
+    public function examSessions() { return $this->hasMany(ExamSession::class); }
+
+    // Rumus Favorit
+    public function favoriteFormulas() { return $this->belongsToMany(Formula::class, 'user_formula_favorites'); }
+
+    // Streak Harian
+    public function streak() { return $this->hasOne(UserStreak::class); }
 }
