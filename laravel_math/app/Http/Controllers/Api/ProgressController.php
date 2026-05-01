@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\UserProgress;
 use App\Models\UserStreak;
+use App\Models\ExamSession; // Pastikan ini di-import
 use App\Models\Topic;
 
 class ProgressController extends Controller
@@ -14,22 +15,17 @@ class ProgressController extends Controller
     {
         $user = $request->user();
 
-        $streak = UserStreak::where('user_id', $user->id)->first();
-        $progress = UserProgress::with('topic')->where('user_id', $user->id)->get();
-
-        $totalTopics = Topic::count();
-        $completedTopics = UserProgress::where('user_id', $user->id)
-            ->where('status', 'completed')
-            ->count();
-
-        $overallPercentage = $totalTopics > 0 ? ($completedTopics / $totalTopics) * 100 : 0;
+        // Pastikan mengambil SEMUA sesi ujian, bukan diringkas
+        $sessions = \App\Models\ExamSession::where('user_id', $user->id)
+            ->with(['assignment.questions', 'answers'])
+            ->latest() // Yang terbaru di atas
+            ->get();
 
         return response()->json([
-            'streak' => $streak,
-            'overall_percentage' => round($overallPercentage),
-            'total_topics' => $totalTopics,
-            'completed_topics' => $completedTopics,
-            'topic_analytics' => $progress
+            'streak' => \App\Models\UserStreak::where('user_id', $user->id)->first(),
+            'overall_percentage' => 0, // Abaikan dulu hitungan ini
+            'completed_topics' => 0,   // Abaikan dulu hitungan ini
+            'sessions' => $sessions,   // INI YANG DITAMPILKAN DI LIST
         ]);
     }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_math/features/forum/screen/forum_feed_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/home/home_screen.dart'; // Daftar Topik
 import 'package:flutter_math/features/dashboard/screen/progress_screen.dart';
@@ -18,8 +19,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // Daftar halaman yang dihubungkan ke BottomNav
   final List<Widget> _screens = [
     const HomeScreen(),        // Fitur 1: Materi
-    const ThreadListScreen(),   // Fitur 10: Forum
-    const LeaderboardScreen(),  // Fitur 8: Gamifikasi
+    const ForumFeedScreen(),   // Fitur 10: Forum
+    // const LeaderboardScreen(),  // Fitur 8: Gamifikasi
     const ProgressScreen(),     // Fitur 7: Analitik
   ];
 
@@ -39,7 +40,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.book), label: "Materi"),
           BottomNavigationBarItem(icon: Icon(Icons.forum), label: "Forum"),
-          BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: "Rank"),
+          // BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: "Rank"),
           BottomNavigationBarItem(icon: Icon(Icons.analytics), label: "Progres"),
         ],
       ),

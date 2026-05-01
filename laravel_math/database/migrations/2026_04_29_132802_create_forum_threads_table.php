@@ -16,8 +16,11 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('topic_id')->constrained()->onDelete('cascade');
             $table->string('title');
-            $table->text('content');
-            $table->string('image_path')->nullable(); // Jika mahasiswa upload foto soal
+            $table->text('body'); // <--- PASTIKAN INI 'body', BUKAN 'content'
+            $table->string('image_url')->nullable();
+            $table->integer('views_count')->default(0);
+            $table->boolean('is_pinned')->default(false);
+            $table->boolean('is_closed')->default(false);
             $table->timestamps();
         });
     }

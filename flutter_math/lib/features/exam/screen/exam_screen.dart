@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/exam/guard/seb_guard.dart';
 import 'package:flutter_math/features/exam/service/exam_service.dart';
 import 'package:flutter_math/features/exam/screen/exam_result_screen.dart';
+import 'package:flutter_math/features/dashboard/provider/progress_provider.dart';
 
 class ExamScreen extends ConsumerStatefulWidget {
   final int sessionId;
@@ -63,6 +64,9 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
         score: score,
         answers: finalAnswers,
       );
+
+      ref.invalidate(analyticsProvider);   // Refresh tab Progres
+      ref.invalidate(examServiceProvider); // Refresh daftar kuis (AssignmentList)
 
       if (mounted) {
         ref.invalidate(examServiceProvider);

@@ -1,7 +1,7 @@
 class UserModel {
   final int id;
   final String name;
-  final String email;
+  final String? email;
   final String role;
   final String? avatar;
   final String? nim;    // Baru
@@ -11,7 +11,7 @@ class UserModel {
   UserModel({
     required this.id,
     required this.name,
-    required this.email,
+    this.email,
     required this.role,
     this.avatar,
     this.nim,
@@ -23,7 +23,7 @@ class UserModel {
     return UserModel(
       id: json['id'],
       name: json['name'],
-      email: json['email'],
+      email: json['email']?.toString(), 
       role: json['role'],
       avatar: json['avatar'],
       nim: json['nim'],
