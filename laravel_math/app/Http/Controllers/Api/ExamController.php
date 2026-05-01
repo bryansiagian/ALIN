@@ -6,57 +6,79 @@ use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\ExamSession;
 use App\Models\QuestionBank;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ExamController extends Controller
 {
     // Mengambil daftar tugas yang belum melewati deadline
-    public function getAssignments()
+    public function getAssignments(Request $request)
     {
-        $assignments = Assignment::with('topic')
-            ->where('deadline', '>', now())
+        $user = $request->user();
+        return Assignment::with('topic')
+            ->withCount(['examSessions' => function($q) use ($user) {
+                $q->where('user_id', $user->id); // Hanya hitung sesi milik mahasiswa ini
+            }])
             ->where('status', 'published')
-            ->orderBy('deadline', 'asc')
             ->get();
-
-        return response()->json($assignments);
     }
 
     // Memulai sesi ujian
     public function startExam(Request $request, $assignmentId)
     {
-        $user = $request->user();
-        $assignment = Assignment::findOrFail($assignmentId);
+        try {
+            $user = $request->user();
+            $assignment = Assignment::with('questions')->findOrFail($assignmentId);
 
-        // Cek apakah sudah ada sesi, jika belum buat baru
-        $session = ExamSession::firstOrCreate(
-            ['assignment_id' => $assignmentId, 'user_id' => $user->id],
-            [
+            // 1. Cek apakah ada sesi yang masih 'ongoing' (belum disubmit)
+            // Mahasiswa tidak boleh buka sesi baru kalau sesi lama belum selesai
+            $activeSession = ExamSession::where('assignment_id', $assignmentId)
+                ->where('user_id', $user->id)
+                ->where('status', 'ongoing')
+                ->first();
+
+            if ($activeSession) {
+                return response()->json([
+                    'session' => $activeSession,
+                    'assignment' => $assignment,
+                    'questions' => $assignment->questions
+                ]);
+            }
+
+            // 2. Hitung jumlah sesi yang sudah 'submitted'
+            $completedCount = ExamSession::where('assignment_id', $assignmentId)
+                ->where('user_id', $user->id)
+                ->where('status', 'submitted')
+                ->count();
+
+            // 3. Cek Jatah Percobaan
+            if ($completedCount >= $assignment->attempt_limit) {
+                return response()->json([
+                    'message' => "Jatah percobaan Anda sudah habis ($completedCount/{$assignment->attempt_limit})."
+                ], 403);
+            }
+
+            // 4. Buat Sesi Baru (Karena jatah masih ada)
+            $session = ExamSession::create([
+                'assignment_id' => $assignmentId,
+                'user_id' => $user->id,
                 'started_at' => now(),
                 'status' => 'ongoing',
                 'violation_count' => 0,
                 'is_locked' => false,
                 'expired_at' => now()->addMinutes($assignment->duration_minutes)
-            ]
-        );
+            ]);
 
-        // Jika sesi sudah pernah di-submit sebelumnya
-        if ($session->status === 'submitted') {
-            return response()->json(['message' => 'Ujian ini sudah selesai dikerjakan.'], 403);
+            return response()->json([
+                'session' => $session,
+                'assignment' => $assignment,
+                'questions' => $assignment->questions
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error: ' . $e->getMessage()], 500);
         }
-
-        // Ambil soal secara acak sesuai question_count yang ditentukan dosen
-        $questions = QuestionBank::where('topic_id', $assignment->topic_id)
-            ->inRandomOrder()
-            ->limit($assignment->question_count)
-            ->get();
-
-        return response()->json([
-            'session' => $session,
-            'assignment' => $assignment,
-            'questions' => $questions
-        ]);
     }
 
     // Endpoint Fitur SEB: Melaporkan deteksi screenshot/pindah aplikasi
@@ -82,25 +104,38 @@ class ExamController extends Controller
     // Menyelesaikan ujian dan mengirim skor
     public function submitExam(Request $request, $sessionId)
     {
-        $session = ExamSession::findOrFail($sessionId);
+        return DB::transaction(function () use ($request, $sessionId) {
+            $session = ExamSession::findOrFail($sessionId);
 
-        if ($session->status === 'submitted') {
-            return response()->json(['message' => 'Ujian sudah pernah dikirim.'], 403);
-        }
+            // 1. Simpan Jawaban Detail
+            $answers = $request->answers; // Map dari Flutter: { "question_id": "A" }
+            foreach ($answers as $qId => $ans) {
+                $question = QuestionBank::find($qId);
+                $isCorrect = $question->correct_answer == $ans;
 
-        $request->validate([
-            'total_score' => 'required|integer|min:0|max:100',
-        ]);
+                \App\Models\ExamAnswer::create([
+                    'exam_session_id' => $session->id,
+                    'question_id' => $qId,
+                    'user_answer' => $ans,
+                    'is_correct' => $isCorrect,
+                    'score' => $isCorrect ? 1 : 0, // Bobot sederhana
+                ]);
+            }
 
-        $session->update([
-            'submitted_at' => now(),
-            'total_score' => $request->total_score,
-            'status' => 'submitted'
-        ]);
+            // 2. Update Skor Akhir di Session
+            $session->update([
+                'submitted_at' => now(),
+                'total_score' => $request->total_score,
+                'status' => 'submitted'
+            ]);
 
-        return response()->json([
-            'message' => 'Ujian berhasil dikirim',
-            'total_score' => $session->total_score
-        ]);
+            return response()->json(['message' => 'Sukses menyimpan jawaban']);
+        });
+    }
+
+    public function getQuestions($id)
+    {
+        $assignment = Assignment::with('questions')->findOrFail($id);
+        return response()->json($assignment->questions);
     }
 }

@@ -1,132 +1,141 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:screen_protector/screen_protector.dart';
-
-// IMPORT INI YANG HILANG:
-import 'package:flutter_math/features/exam/guard/seb_guard.dart'; 
-// (Opsional) Jika ExamService dibutuhkan di sini:
-import 'package:flutter_math/features/exam/service/exam_service.dart'; 
+import 'package:flutter_math/features/exam/guard/seb_guard.dart';
+import 'package:flutter_math/features/exam/service/exam_service.dart';
+import 'package:flutter_math/features/exam/screen/exam_result_screen.dart';
 
 class ExamScreen extends ConsumerStatefulWidget {
   final int sessionId;
-  const ExamScreen({super.key, required this.sessionId});
+  final List questions;
+  final int duration;
+  final bool showResults;
+
+  const ExamScreen({super.key, required this.sessionId, required this.questions, required this.duration, required this.showResults,});
 
   @override
   ConsumerState<ExamScreen> createState() => _ExamScreenState();
 }
 
 class _ExamScreenState extends ConsumerState<ExamScreen> {
-  // SEBGuard sekarang akan dikenali setelah import di atas ditambahkan
   late SEBGuard _sebGuard;
+  int _currentIndex = 0;
+  final Map<int, String> _answers = {}; 
 
   @override
   void initState() {
     super.initState();
-    
-    // Inisialisasi SEB Guard (Logika penguncian layar & deteksi pindah app)
     _sebGuard = SEBGuard(
       ref.read(violationReporterProvider),
       sessionId: widget.sessionId,
-      onLocked: () {
-        // Callback ini dipicu jika Laravel mengembalikan is_locked = true
-        _handleLockedExam();
-      },
+      onLocked: () => _handleLocked(),
     );
   }
 
-  void _handleLockedExam() {
-    // Memastikan dialog muncul meskipun user sedang tidak fokus
+  void _handleLocked() {
     if (!mounted) return;
-    
     showDialog(
       context: context,
-      barrierDismissible: false, // User tidak bisa menutup dialog dengan klik luar
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.lock, color: Colors.red),
-            SizedBox(width: 10),
-            Text("Ujian Terkunci!"),
-          ],
+        title: const Text("Kecurangan Terdeteksi!"),
+        content: const Text("Akun ujian Anda dikunci karena terlalu banyak pelanggaran."),
+        actions: [TextButton(onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst), child: const Text("Keluar"))],
+      ),
+    );
+  }
+
+  void _submitExam() async {
+    int correct = 0;
+    Map<String, String> finalAnswers = {};
+    
+    for (var q in widget.questions) {
+      String? ans = _answers[q['id']];
+      finalAnswers[q['id'].toString()] = ans ?? "";
+      if (ans == q['correct_answer']) correct++;
+    }
+    
+    int score = ((correct / widget.questions.length) * 100).toInt();
+
+    try {
+      // Sekarang memanggil dengan named parameters yang sudah kita buat di Service
+      await ref.read(examServiceProvider).submitExam(
+        sessionId: widget.sessionId, 
+        score: score,
+        answers: finalAnswers,
+      );
+
+      if (mounted) {
+        ref.invalidate(examServiceProvider);
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (c) => ExamResultScreen(
+            score: score, 
+            questions: widget.questions, 
+            userAnswers: _answers, 
+            // AMBIL DARI SETTINGAN DOSEN:
+            canShowDetail: widget.showResults, 
+          ))
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentQ = widget.questions[_currentIndex];
+
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text("Soal ${_currentIndex + 1} / ${widget.questions.length}"),
+          automaticallyImplyLeading: false,
         ),
-        content: const Text(
-          "Anda terdeteksi melakukan pelanggaran (screenshot/pindah aplikasi) "
-          "lebih dari batas yang ditentukan. Sesi ujian Anda telah dihentikan secara otomatis. "
-          "Silakan hubungi dosen pengampu untuk pembukaan blokir.",
+        body: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(currentQ['question_text'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              ...(currentQ['options'] as List).map((opt) {
+                return RadioListTile<String>(
+                  title: Text("${opt['key']}. ${opt['text']}"),
+                  value: opt['key'],
+                  groupValue: _answers[currentQ['id']],
+                  onChanged: (val) => setState(() => _answers[currentQ['id']] = val!),
+                );
+              }),
+              const Spacer(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_currentIndex > 0)
+                    ElevatedButton(onPressed: () => setState(() => _currentIndex--), child: const Text("Kembali")),
+                  if (_currentIndex < widget.questions.length - 1)
+                    ElevatedButton(onPressed: () => setState(() => _currentIndex++), child: const Text("Lanjut"))
+                  else
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                      onPressed: _submitExam, 
+                      child: const Text("Selesai & Submit")
+                    ),
+                ],
+              )
+            ],
+          ),
         ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              // Menghapus semua route dan kembali ke Dashboard
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: const Text("Keluar dari Ujian", style: TextStyle(color: Colors.white)),
-          )
-        ],
       ),
     );
   }
 
   @override
   void dispose() {
-    // Sangat Penting: Mematikan observer & proteksi screenshot saat keluar
-    _sebGuard.dispose(); 
+    _sebGuard.dispose();
     super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Menggunakan WillPopScope (atau PopScope di Flutter terbaru) 
-    // agar user tidak bisa keluar menggunakan tombol 'Back' HP
-    return PopScope(
-      canPop: false, // Mematikan tombol back hardware
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Selesaikan ujian terlebih dahulu untuk keluar.")),
-        );
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("ALIN - Ujian Aman"),
-          backgroundColor: Colors.indigo,
-          foregroundColor: Colors.white,
-          automaticallyImplyLeading: false, // Menghapus tombol back di AppBar
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.security, size: 80, color: Colors.indigo),
-              const SizedBox(height: 20),
-              Text(
-                "Sesi Ujian: ${widget.sessionId}",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Card(
-                // Ganti Colors.amberContainer dengan ini:
-                color: Colors.amber.shade100, 
-                child: const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Text(
-                    "PERINGATAN: Jangan menekan tombol Home, berpindah aplikasi, "
-                    "atau melakukan screenshot. Sistem akan mendeteksi kecurangan secara otomatis.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-              const CircularProgressIndicator(), // Placeholder untuk konten soal
-              const SizedBox(height: 20),
-              const Text("Memuat Soal Aljabar Linear..."),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

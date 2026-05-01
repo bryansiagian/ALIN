@@ -68,7 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['auth:sanctum', 'is-lecturer'])->prefix('lecturer')->group(function () {
         Route::get('/assignments', [LecturerController::class, 'index']); // Memanggil fungsi index
         Route::post('/assignments', [LecturerController::class, 'store']); // Memanggil fungsi store
+        Route::put('/questions/{id}', [LecturerController::class, 'updateQuestion']);
         Route::get('/assignments/{id}/results', [LecturerController::class, 'getResults']); // Memanggil fungsi getResults
         Route::get('/assignments/{id}/questions', [LecturerController::class, 'getQuestions']);
+        Route::get('/students', [LecturerController::class, 'getStudents']);
+        Route::get('/students/{id}', [LecturerController::class, 'getStudentDetail']);
     });
 });

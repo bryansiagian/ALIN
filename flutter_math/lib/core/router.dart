@@ -5,6 +5,7 @@ import 'package:flutter_math/features/auth/provider/auth_provider.dart';
 import 'package:flutter_math/features/auth/screen/login_screen.dart';
 import 'package:flutter_math/features/dashboard/screen/main_navigation_screen.dart';
 import 'package:flutter_math/features/exam/screen/lecturer_dashboard_screen.dart';
+import 'package:flutter_math/features/exam/screen/main_lecturer_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -46,7 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // HALAMAN UTAMA DOSEN (Ini yang tadi hilang sehingga error 404)
       GoRoute(
         path: '/lecturer',
-        builder: (context, state) => const LecturerDashboardScreen(),
+        builder: (context, state) => const MainLecturerScreen(), // Ubah ini
       ),
     ],
   );

@@ -21,6 +21,9 @@ return new class extends Migration
             $table->integer('duration_minutes');
             $table->integer('question_count');
             $table->boolean('is_safe_exam')->default(false);
+            $table->boolean('allow_reattempt')->default(false); // Bisa mengulang atau tidak
+            $table->integer('attempt_limit')->default(1);       // Batas maksimal percobaan
+            $table->boolean('show_results')->default(true);
             $table->enum('status', ['draft', 'published', 'closed'])->default('draft');
             $table->timestamps();
         });

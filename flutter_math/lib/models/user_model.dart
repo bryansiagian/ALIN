@@ -4,6 +4,9 @@ class UserModel {
   final String email;
   final String role;
   final String? avatar;
+  final String? nim;    // Baru
+  final String? prodi;  // Baru
+  final String? nidn;   // Baru
 
   UserModel({
     required this.id,
@@ -11,6 +14,9 @@ class UserModel {
     required this.email,
     required this.role,
     this.avatar,
+    this.nim,
+    this.prodi,
+    this.nidn,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +26,9 @@ class UserModel {
       email: json['email'],
       role: json['role'],
       avatar: json['avatar'],
+      nim: json['nim'],
+      prodi: json['prodi'],
+      nidn: json['nidn'],
     );
   }
 }

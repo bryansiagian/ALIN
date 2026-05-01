@@ -10,26 +10,28 @@ use App\Models\Formula;
 use App\Models\QuestionBank;
 use App\Models\Assignment;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AlinSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Buat User Dosen (Untuk Lecturer_id di tabel assignments)
+        // 1. Buat User Dosen
         $lecturer = User::create([
-            'name' => 'Dr. Aljabar, M.Kom',
+            'name' => 'Sari Muthia Silalahi',
             'email' => 'dosen@alin.com',
             'password' => Hash::make('password123'),
             'role' => 'lecturer',
+            'nidn' => '0012345678',
         ]);
 
-        // Buat User Mahasiswa (Untuk Anda login di Flutter nanti)
+        // Buat User Mahasiswa
         User::create([
-            'name' => 'Mahasiswa Alin',
+            'name' => 'Bryan',
             'email' => 'student@alin.com',
             'password' => Hash::make('password123'),
             'role' => 'student',
+            'nim' => '42324029',
+            'prodi' => 'Teknologi Informasi',
         ]);
 
         // 2. Buat Topik Matriks
@@ -41,24 +43,9 @@ class AlinSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 3. Buat Materi Interaktif (Fitur 1)
-        Material::create([
-            'topic_id' => $topicMatriks->id,
-            'title' => 'Pengenalan Matriks',
-            'content' => 'Matriks adalah susunan bilangan berbentuk baris dan kolom...',
-            'content_type' => 'text',
-            'order_index' => 1,
-        ]);
+        // 3. Buat Soal-soal (Simpan ID-nya ke dalam array)
+        $qIds = [];
 
-        // 4. Buat Rumus LaTeX (Fitur 6)
-        Formula::create([
-            'topic_id' => $topicMatriks->id,
-            'title' => 'Determinan Matriks 2x2',
-            'latex_expression' => '\det(A) = ad - bc', // Sesuai DBML
-            'description' => 'Rumus untuk mencari determinan pada matriks ordo 2x2.',
-        ]);
-
-        // 5. Buat Bank Soal (Fitur 9)
         $q1 = QuestionBank::create([
             'topic_id' => $topicMatriks->id,
             'question_text' => 'Berapakah determinan dari matriks A = [[3, 2], [1, 4]]?',
@@ -73,8 +60,9 @@ class AlinSeeder extends Seeder
             'correct_answer' => 'A',
             'explanation' => 'Determinan = (3 * 4) - (2 * 1) = 12 - 2 = 10.',
         ]);
+        $qIds[] = $q1->id;
 
-        QuestionBank::create([
+        $q2 = QuestionBank::create([
             'topic_id' => $topicMatriks->id,
             'question_text' => 'Matriks yang semua elemen diagonalnya adalah 1 disebut...',
             'question_type' => 'multiple_choice',
@@ -88,20 +76,29 @@ class AlinSeeder extends Seeder
             'correct_answer' => 'B',
             'explanation' => 'Matriks Identitas memiliki elemen 1 pada diagonal utama.',
         ]);
+        $qIds[] = $q2->id;
 
-        // 6. Buat Penugasan/Quiz (Fitur 12)
-        Assignment::create([
+        // 4. Buat Penugasan/Quiz
+        $quiz = Assignment::create([
             'lecturer_id' => $lecturer->id,
             'topic_id' => $topicMatriks->id,
             'title' => 'Quiz Mingguan: Dasar Matriks',
             'description' => 'Kerjakan quiz ini dengan jujur. Mode SEB Aktif.',
-            'deadline' => now()->addDays(7), // Deadline 7 hari ke depan
+            'deadline' => now()->addDays(7),
             'duration_minutes' => 30,
             'question_count' => 2,
-            'is_safe_exam' => true, // AKTIFKAN MODE SEB
+            'is_safe_exam' => true,
             'status' => 'published',
+            // Tambahkan default setting lainnya sesuai kriteria kita sebelumnya
+            'allow_reattempt' => false,
+            'attempt_limit' => 1,
+            'show_results' => true,
         ]);
 
-        $this->command->info('AlinSeeder: Data berhasil dibuat!');
+        // 5. INI KUNCINYA: Hubungkan Soal ke Kuis (Pivot Table)
+        // Tanpa ini, kuis akan kosong melompong.
+        $quiz->questions()->attach($qIds);
+
+        $this->command->info('AlinSeeder: Berhasil membuat data dan menghubungkan soal ke kuis!');
     }
 }

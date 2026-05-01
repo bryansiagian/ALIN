@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/learning/provider/learning_provider.dart';
 import 'package:flutter_math/features/learning/screen/material_detail_screen.dart';
 import 'package:flutter_math/features/auth/provider/auth_provider.dart';
+import 'package:flutter_math/features/exam/screen/assignment_list_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -40,6 +41,22 @@ class HomeScreen extends ConsumerWidget {
             child: Text("Pilih Topik Materi:", style: TextStyle(color: Colors.grey)),
           ),
           const SizedBox(height: 10),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            color: Colors.indigo.shade50,
+            child: Column(
+              children: [
+                const Text("Ada tugas untukmu!", style: TextStyle(fontWeight: FontWeight.bold)),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AssignmentListScreen())),
+                  icon: const Icon(Icons.quiz),
+                  label: const Text("Buka Daftar Ujian"),
+                ),
+              ],
+            ),
+          ),
 
           // 2. Tampilkan Daftar Topik
           Expanded(

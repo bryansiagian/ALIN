@@ -16,6 +16,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
+            $table->string('nim')->unique()->nullable();
+            $table->string('prodi')->nullable();
+            $table->string('nidn')->unique()->nullable();
             $table->enum('role', ['student', 'lecturer', 'admin'])->default('student');
             $table->string('avatar')->nullable();
             $table->rememberToken();

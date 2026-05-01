@@ -25,6 +25,15 @@ class ExamSession extends Model
         'is_locked' => 'boolean',
     ];
 
-    public function assignment() { return $this->belongsTo(Assignment::class); }
-    public function user() { return $this->belongsTo(User::class); }
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
+
+    public function assignment() {
+        return $this->belongsTo(Assignment::class);
+    }
+    
+    public function answers() {
+        return $this->hasMany(ExamAnswer::class, 'exam_session_id');
+    }
 }

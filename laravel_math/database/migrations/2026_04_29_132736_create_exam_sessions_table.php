@@ -23,9 +23,6 @@ return new class extends Migration
             $table->boolean('is_locked')->default(false);
             $table->integer('violation_count')->default(0);
             $table->timestamps();
-
-            // Index unik agar satu user hanya punya satu sesi per assignment
-            $table->unique(['assignment_id', 'user_id'], 'uq_session_user');
         });
     }
 

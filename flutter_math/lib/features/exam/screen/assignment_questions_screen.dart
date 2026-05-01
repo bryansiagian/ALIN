@@ -33,8 +33,16 @@ class AssignmentQuestionsScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Soal ${index + 1}:", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
-                      const SizedBox(height: 5),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Soal ${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
+                            onPressed: () => _showEditDialog(context, ref, q), // Panggil dialog edit
+                          ),
+                        ],
+                      ),
                       Text(q['question_text']),
                       const Divider(),
                       // Tampilkan pilihan jawaban
@@ -50,6 +58,49 @@ class AssignmentQuestionsScreen extends ConsumerWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, WidgetRef ref, Map q) {
+    final controller = TextEditingController(text: q['question_text']);
+    String correctKey = q['correct_answer'];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Edit Soal"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: controller, maxLines: 3, decoration: const InputDecoration(labelText: "Teks Soal")),
+            DropdownButton<String>(
+              value: correctKey,
+              items: ['A','B','C','D'].map((e) => DropdownMenuItem(value: e, child: Text("Kunci: $e"))).toList(),
+              onChanged: (v) => correctKey = v!,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
+          ElevatedButton(
+            onPressed: () async {
+              await ref.read(lecturerServiceProvider).updateQuestion(q['id'], {
+                'question_text': controller.text,
+                'correct_answer': correctKey,
+              });
+
+              // CEK MOUNTED
+              if (!context.mounted) return;
+
+              Navigator.pop(context); // Tutup Dialog
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Soal berhasil diperbarui!")),
+              );
+            },
+            child: const Text("Simpan")
+          ),
+        ],
       ),
     );
   }
