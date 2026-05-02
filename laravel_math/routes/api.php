@@ -73,5 +73,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/assignments/{id}/questions', [LecturerController::class, 'getQuestions']);
         Route::get('/students', [LecturerController::class, 'getStudents']);
         Route::get('/students/{id}', [LecturerController::class, 'getStudentDetail']);
+        Route::get('/topics-list', [LecturerController::class, 'getTopics']); // Untuk dropdown
+        Route::post('/topics', [LecturerController::class, 'storeTopic']);     // Untuk simpan topik baru
+        Route::post('/materials', [LecturerController::class, 'storeMaterial']); // Untuk upload PDF
     });
 });

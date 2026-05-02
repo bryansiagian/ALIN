@@ -3,6 +3,7 @@ import 'package:flutter_math/models/assignment_model.dart'; // Pastikan model su
 import 'package:flutter_math/models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/core/api/api_client.dart';
+import 'dart:io';
 
 class LecturerService {
   final Dio _dio;
@@ -48,6 +49,33 @@ class LecturerService {
   // --- BARU: Method untuk Reset Percobaan Mahasiswa ---
   Future<void> resetAttempt(int sessionId) async {
     await _dio.delete('lecturer/sessions/$sessionId/reset');
+  }
+
+  Future<void> createTopic({required String title, String? description}) async {
+    await _dio.post('lecturer/topics', data: {
+      'title': title,
+      'description': description,
+    });
+  }
+
+  Future<List<dynamic>> getTopicsList() async {
+    final response = await _dio.get('lecturer/topics-list');
+    return response.data;
+  }
+
+  Future<void> uploadMaterial({
+    required int topicId,
+    required String title,
+    required String filePath,
+  }) async {
+    // Gunakan FormData untuk mengirim file fisik (Multipart)
+    FormData formData = FormData.fromMap({
+      'topic_id': topicId,
+      'title': title,
+      'pdf_file': await MultipartFile.fromFile(filePath, filename: 'materi.pdf'),
+    });
+
+    await _dio.post('lecturer/materials', data: formData);
   }
 }
 

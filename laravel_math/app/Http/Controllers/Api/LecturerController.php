@@ -10,6 +10,7 @@ use App\Models\ExamSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB; // WAJIB ADA untuk Transaction
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 
 class LecturerController extends Controller
@@ -89,6 +90,51 @@ class LecturerController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function storeTopic(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|unique:topics,title',
+            'description' => 'nullable|string',
+        ]);
+
+        $topic = \App\Models\Topic::create([
+            'title' => $validated['title'],
+            'slug' => Str::slug($validated['title']),
+            'description' => $validated['description'],
+            'order_index' => \App\Models\Topic::count() + 1,
+            'is_active' => true,
+        ]);
+
+        return response()->json($topic, 201);
+    }
+
+    public function getTopics() {
+        return response()->json(\App\Models\Topic::all());
+    }
+
+    // Simpan materi PDF baru
+    public function storeMaterial(Request $request)
+    {
+        $request->validate([
+            'topic_id' => 'required|exists:topics,id',
+            'title' => 'required|string|max:255',
+            'pdf_file' => 'required|mimes:pdf|max:10000', // Max 10MB
+        ]);
+
+        // Simpan file ke storage/app/public/materials
+        $path = $request->file('pdf_file')->store('materials', 'public');
+
+        $material = \App\Models\Material::create([
+            'topic_id' => $request->topic_id,
+            'title' => $request->title,
+            'file_path' => $path,
+            'content_type' => 'text', // Kita beri label text saja atau buat tipe baru 'pdf'
+            'order_index' => \App\Models\Material::where('topic_id', $request->topic_id)->count() + 1,
+        ]);
+
+        return response()->json(['message' => 'Materi berhasil diupload', 'data' => $material], 201);
     }
 
     public function storeQuestion(Request $request)
