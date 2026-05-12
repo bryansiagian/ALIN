@@ -6,74 +6,85 @@ use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\ExamSession;
 use App\Models\QuestionBank;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ExamController extends Controller
 {
-    // Mengambil daftar tugas yang belum melewati deadline
+    /**
+     * Mengambil daftar tugas yang sudah dipublikasikan,
+     * beserta jumlah sesi yang sudah dikerjakan mahasiswa ini.
+     */
     public function getAssignments(Request $request)
     {
         $user = $request->user();
+
         return Assignment::with('topic')
-            ->withCount(['examSessions' => function($q) use ($user) {
-                $q->where('user_id', $user->id); // Hanya hitung sesi milik mahasiswa ini
+            ->withCount(['examSessions' => function ($q) use ($user) {
+                $q->where('user_id', $user->id);
             }])
             ->where('status', 'published')
             ->get();
     }
 
-    // Memulai sesi ujian
+    /**
+     * Memulai sesi ujian baru, atau mengembalikan sesi ongoing jika ada.
+     */
     public function startExam(Request $request, $assignmentId)
     {
         try {
-            $user = $request->user();
+            $user       = $request->user();
             $assignment = Assignment::with('questions')->findOrFail($assignmentId);
 
-            // 1. Cek apakah ada sesi yang masih 'ongoing' (belum disubmit)
-            // Mahasiswa tidak boleh buka sesi baru kalau sesi lama belum selesai
+            // 1. Cek apakah ada sesi ongoing yang belum disubmit
             $activeSession = ExamSession::where('assignment_id', $assignmentId)
                 ->where('user_id', $user->id)
                 ->where('status', 'ongoing')
                 ->first();
 
             if ($activeSession) {
+                // Jika sesi aktif sudah dikunci, tolak akses
+                if ($activeSession->is_locked) {
+                    return response()->json([
+                        'message' => 'Sesi ujian Anda telah dikunci karena pelanggaran.'
+                    ], 403);
+                }
+
                 return response()->json([
-                    'session' => $activeSession,
+                    'session'    => $activeSession,
                     'assignment' => $assignment,
-                    'questions' => $assignment->questions
+                    'questions'  => $assignment->questions,
                 ]);
             }
 
-            // 2. Hitung jumlah sesi yang sudah 'submitted'
+            // 2. Hitung percobaan yang sudah selesai
             $completedCount = ExamSession::where('assignment_id', $assignmentId)
                 ->where('user_id', $user->id)
                 ->where('status', 'submitted')
                 ->count();
 
-            // 3. Cek Jatah Percobaan
+            // 3. Cek jatah percobaan
             if ($completedCount >= $assignment->attempt_limit) {
                 return response()->json([
-                    'message' => "Jatah percobaan Anda sudah habis ($completedCount/{$assignment->attempt_limit})."
+                    'message' => "Jatah percobaan Anda sudah habis ({$completedCount}/{$assignment->attempt_limit})."
                 ], 403);
             }
 
-            // 4. Buat Sesi Baru (Karena jatah masih ada)
+            // 4. Buat sesi baru
             $session = ExamSession::create([
-                'assignment_id' => $assignmentId,
-                'user_id' => $user->id,
-                'started_at' => now(),
-                'status' => 'ongoing',
+                'assignment_id'   => $assignmentId,
+                'user_id'         => $user->id,
+                'started_at'      => now(),
+                'status'          => 'ongoing',
                 'violation_count' => 0,
-                'is_locked' => false,
-                'expired_at' => now()->addMinutes($assignment->duration_minutes)
+                'is_locked'       => false,
+                'expired_at'      => now()->addMinutes($assignment->duration_minutes),
             ]);
 
             return response()->json([
-                'session' => $session,
+                'session'    => $session,
                 'assignment' => $assignment,
-                'questions' => $assignment->questions
+                'questions'  => $assignment->questions,
             ]);
 
         } catch (\Exception $e) {
@@ -81,58 +92,94 @@ class ExamController extends Controller
         }
     }
 
-    // Endpoint Fitur SEB: Melaporkan deteksi screenshot/pindah aplikasi
+    /**
+     * Melaporkan pelanggaran (screenshot / pindah app).
+     * Langsung submit skor 0 saat pelanggaran pertama.
+     */
     public function reportViolation(Request $request, $sessionId)
     {
         $session = ExamSession::findOrFail($sessionId);
 
-        // Tambah hitungan pelanggaran
+        // Jika sudah disubmit (karena pelanggaran sebelumnya), abaikan
+        if ($session->status === 'submitted') {
+            return response()->json([
+                'violation_count' => $session->violation_count,
+                'is_locked'       => true,
+                'message'         => 'Sesi sudah selesai.',
+            ]);
+        }
+
+        // Langsung submit skor 0 pada pelanggaran pertama
         $session->increment('violation_count');
 
-        // Logic: Jika pelanggaran lebih dari 3 kali, kunci sesi ujian
-        if ($session->violation_count >= 3) {
-            $session->update(['is_locked' => true]);
-        }
+        DB::transaction(function () use ($session) {
+            $session->update([
+                'is_locked'    => true,
+                'total_score'  => 0,
+                'submitted_at' => now(),
+                'status'       => 'submitted',
+            ]);
+        });
 
         return response()->json([
             'violation_count' => $session->violation_count,
-            'is_locked' => $session->is_locked,
-            'message' => 'Pelanggaran tercatat!'
+            'is_locked'       => true,
+            'message'         => 'Pelanggaran terdeteksi! Ujian otomatis dinilai 0.',
         ]);
     }
 
-    // Menyelesaikan ujian dan mengirim skor
+    /**
+     * Menyimpan jawaban dan menyelesaikan ujian.
+     * Menolak submit jika sesi dikunci atau sudah submitted.
+     */
     public function submitExam(Request $request, $sessionId)
     {
         return DB::transaction(function () use ($request, $sessionId) {
             $session = ExamSession::findOrFail($sessionId);
 
-            // 1. Simpan Jawaban Detail
-            $answers = $request->answers; // Map dari Flutter: { "question_id": "A" }
+            // Tolak jika sesi sudah auto-submit karena pelanggaran
+            if ($session->is_locked) {
+                return response()->json([
+                    'message' => 'Ujian telah otomatis dinilai 0 karena pelanggaran.'
+                ], 403);
+            }
+
+            // Tolak jika sudah disubmit sebelumnya (idempotency guard)
+            if ($session->status === 'submitted') {
+                return response()->json([
+                    'message' => 'Ujian sudah pernah disubmit.'
+                ], 409);
+            }
+
+            // 1. Simpan jawaban detail
+            $answers = $request->answers ?? [];
             foreach ($answers as $qId => $ans) {
-                $question = QuestionBank::find($qId);
-                $isCorrect = $question->correct_answer == $ans;
+                $question  = QuestionBank::find($qId);
+                $isCorrect = $question && $question->correct_answer === $ans;
 
                 \App\Models\ExamAnswer::create([
                     'exam_session_id' => $session->id,
-                    'question_id' => $qId,
-                    'user_answer' => $ans,
-                    'is_correct' => $isCorrect,
-                    'score' => $isCorrect ? 1 : 0, // Bobot sederhana
+                    'question_id'     => $qId,
+                    'user_answer'     => $ans,
+                    'is_correct'      => $isCorrect,
+                    'score'           => $isCorrect ? 1 : 0,
                 ]);
             }
 
-            // 2. Update Skor Akhir di Session
+            // 2. Update skor akhir
             $session->update([
                 'submitted_at' => now(),
-                'total_score' => $request->total_score,
-                'status' => 'submitted'
+                'total_score'  => $request->total_score ?? 0,
+                'status'       => 'submitted',
             ]);
 
-            return response()->json(['message' => 'Sukses menyimpan jawaban']);
+            return response()->json(['message' => 'Jawaban berhasil disimpan.']);
         });
     }
 
+    /**
+     * Mengambil daftar soal dari sebuah assignment (untuk dosen).
+     */
     public function getQuestions($id)
     {
         $assignment = Assignment::with('questions')->findOrFail($id);

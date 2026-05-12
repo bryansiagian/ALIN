@@ -16,6 +16,7 @@ class ExamResultScreen extends StatefulWidget {
   final List questions;
   final Map<int, String> userAnswers;
   final bool canShowDetail;
+  final bool violationDetected;
 
   const ExamResultScreen({
     super.key,
@@ -23,6 +24,7 @@ class ExamResultScreen extends StatefulWidget {
     required this.questions,
     required this.userAnswers,
     required this.canShowDetail,
+    this.violationDetected = false,
   });
 
   @override
@@ -54,16 +56,20 @@ class _ExamResultScreenState extends State<ExamResultScreen>
   }
 
   String get _scoreLabel {
+    if (widget.violationDetected) return "Pelanggaran";
     if (widget.score >= 80) return "Lulus";
     if (widget.score >= 60) return "Cukup";
     return "Perlu Latihan";
   }
 
   IconData get _scoreIcon {
+    if (widget.violationDetected) return Icons.warning_amber_rounded;
     if (widget.score >= 80) return Icons.emoji_events_rounded;
     if (widget.score >= 60) return Icons.thumb_up_rounded;
     return Icons.refresh_rounded;
   }
+
+  Color get _violationColor => const Color(0xFFEF4444);
 
   @override
   void initState() {
@@ -97,7 +103,11 @@ class _ExamResultScreenState extends State<ExamResultScreen>
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    if (widget.canShowDetail) ...[
+                    if (widget.violationDetected) ...[
+                      _ViolationBanner(),
+                      const SizedBox(height: 20),
+                    ],
+                    if (widget.canShowDetail && !widget.violationDetected) ...[
                       _StatsRow(correct: _correct, incorrect: _incorrect, unanswered: _unanswered),
                       const SizedBox(height: 28),
                       const _SectionLabel(label: "Review Jawaban"),
@@ -118,7 +128,7 @@ class _ExamResultScreenState extends State<ExamResultScreen>
                           ),
                         );
                       }),
-                    ] else
+                    ] else if (!widget.violationDetected)
                       _HiddenResultCard(),
                     const SizedBox(height: 12),
                     _HomeButton(onTap: () => Navigator.of(context).popUntil((r) => r.isFirst)),
@@ -168,7 +178,7 @@ class _ExamResultScreenState extends State<ExamResultScreen>
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: Text(
-                    widget.canShowDetail ? "Hasil Ujian Anda" : "Ujian Berhasil Dikirim",
+                    widget.violationDetected ? "Ujian Dibatalkan" : widget.canShowDetail ? "Hasil Ujian Anda" : "Ujian Berhasil Dikirim",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -569,6 +579,48 @@ class _AnswerChip extends StatelessWidget {
         children: [
           Text(label, style: TextStyle(fontSize: 9, color: color.withOpacity(0.7), fontWeight: FontWeight.w600)),
           Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ─────────────────────────────────────────────
+//  Violation Banner
+// ─────────────────────────────────────────────
+class _ViolationBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.5),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEF4444),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 32),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            "Pelanggaran Terdeteksi",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFEF4444)),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Anda membuka aplikasi lain saat ujian berlangsung. Ujian otomatis dinilai 0 dan tidak dapat diulang.",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5),
+          ),
         ],
       ),
     );

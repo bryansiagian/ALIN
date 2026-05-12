@@ -359,14 +359,14 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             ),
           ),
         ),
-        title: const Text(
-          "Buat Kuis",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        // title: const Text(
+        //   "Buat Kuis",
+        //   style: TextStyle(
+        //     color: Colors.white,
+        //     fontSize: 16,
+        //     fontWeight: FontWeight.w600,
+        //   ),
+        // ),
       ),
     );
   }

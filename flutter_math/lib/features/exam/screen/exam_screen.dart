@@ -75,7 +75,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen>
     _sebGuard = SEBGuard(
       ref.read(violationReporterProvider),
       sessionId: widget.sessionId,
-      onLocked: _handleLocked,
+      onViolation: _handleViolation,
     );
   }
 
@@ -109,54 +109,21 @@ class _ExamScreenState extends ConsumerState<ExamScreen>
     _slideCtrl.forward(from: 0);
   }
 
-  void _handleLocked() {
+  void _handleViolation() {
     if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFEF2F2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.lock_rounded, color: Color(0xFFEF4444), size: 40),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Akun Dikunci",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Akun ujian Anda dikunci karena terlalu banyak pelanggaran terdeteksi.",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B), height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Center(
-                    child: Text("Keluar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                  ),
-                ),
-              ),
-            ],
-          ),
+    _timer?.cancel();
+
+    // Navigasi langsung ke ExamResultScreen dengan skor 0
+    // Backend sudah menyimpan skor 0 secara otomatis
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExamResultScreen(
+          score: 0,
+          questions: widget.questions,
+          userAnswers: const {}, // Jawaban kosong karena dibatalkan
+          canShowDetail: widget.showResults,
+          violationDetected: true, // Flag untuk tampilkan pesan khusus
         ),
       ),
     );
