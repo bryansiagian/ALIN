@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   runApp(
-    // ProviderScope wajib untuk Riverpod
     const ProviderScope(child: AlinApp()),
   );
 }
@@ -22,7 +21,9 @@ class _AlinAppState extends ConsumerState<AlinApp> {
   @override
   void initState() {
     super.initState();
-    // Cek status login saat aplikasi pertama kali dijalankan
+    // Cek status login saat app pertama dijalankan.
+    // checkAuth() akan fetch /me dari API → mengisi user.hasTakenPlacement
+    // → router.dart otomatis redirect ke /placement jika belum placement.
     Future.microtask(() => ref.read(authProvider.notifier).checkAuth());
   }
 
@@ -35,8 +36,8 @@ class _AlinAppState extends ConsumerState<AlinApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.indigo, // Tema warna Aljabar (Profesional)
-        textTheme: GoogleFonts.poppinsTextTheme(), // Font modern
+        colorSchemeSeed: Colors.indigo,
+        textTheme: GoogleFonts.poppinsTextTheme(),
       ),
       routerConfig: router,
     );

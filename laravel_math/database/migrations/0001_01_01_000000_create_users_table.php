@@ -22,6 +22,7 @@ return new class extends Migration
             $table->enum('role', ['student', 'lecturer', 'admin'])->default('student');
             $table->string('avatar')->nullable();
             $table->rememberToken();
+            $table->boolean('has_taken_placement')->default(false);
             $table->timestamps();
         });
 

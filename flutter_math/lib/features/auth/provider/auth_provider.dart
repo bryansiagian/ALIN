@@ -53,6 +53,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> refreshUser() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      state = state.copyWith(user: user);
+    } catch (_) {
+      // Abaikan error — biarkan routing natural saat app dibuka ulang
+    }
+  }
+
   /// Proses Login
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);

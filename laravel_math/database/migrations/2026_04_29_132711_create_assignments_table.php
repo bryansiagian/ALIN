@@ -25,6 +25,7 @@ return new class extends Migration
             $table->integer('attempt_limit')->default(1);       // Batas maksimal percobaan
             $table->boolean('show_results')->default(true);
             $table->enum('status', ['draft', 'published', 'closed'])->default('draft');
+            $table->boolean('is_placement')->default(false);
             $table->timestamps();
         });
     }

@@ -7,6 +7,7 @@ class UserModel {
   final String? nim;    // Baru
   final String? prodi;  // Baru
   final String? nidn;   // Baru
+  final bool hasTakenPlacement;
 
   UserModel({
     required this.id,
@@ -17,6 +18,7 @@ class UserModel {
     this.nim,
     this.prodi,
     this.nidn,
+    required this.hasTakenPlacement,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class UserModel {
       nim: json['nim'],
       prodi: json['prodi'],
       nidn: json['nidn'],
+      hasTakenPlacement: json['has_taken_placement'] == true || json['has_taken_placement'] == 1,
     );
   }
 }

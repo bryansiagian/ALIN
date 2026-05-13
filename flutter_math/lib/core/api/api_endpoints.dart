@@ -21,4 +21,14 @@ class ApiEndpoints {
   // Others
   static const String leaderboard = 'leaderboard';
   static const String threads = 'forum/threads';
+
+  // Placement
+  static const String placement        = 'placement';          // GET  - ambil soal
+  static const String placementSubmit  = 'placement/submit';   // POST - submit jawaban
+  static const String placementResult  = 'placement/result';   // GET  - ambil hasil
+
+  // Set placement assignment (untuk dosen, di dalam group middleware 'lecturer')
+  // Endpoint: POST /api/lecturer/assignments/{id}/set-placement
+  // Tidak perlu konstanta string di sini karena pakai dynamic segment:
+  //   final url = 'lecturer/assignments/$assignmentId/set-placement';
 }

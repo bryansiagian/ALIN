@@ -18,7 +18,8 @@ class Assignment extends Model
         'allow_reattempt',
         'attempt_limit',
         'show_results',
-        'status'
+        'status',
+        'is_placement',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class Assignment extends Model
         'is_safe_exam' => 'boolean',
         'allow_reattempt' => 'boolean',
         'show_results' => 'boolean',
+        'is_placement'   => 'boolean',
     ];
 
     public function lecturer()

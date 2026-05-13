@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_math/models/assignment_model.dart'; // Pastikan model sudah ada
+import 'package:flutter_math/models/assignment_model.dart';
 import 'package:flutter_math/models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/core/api/api_client.dart';
@@ -46,7 +46,6 @@ class LecturerService {
     await _dio.put('lecturer/questions/$id', data: data);
   }
 
-  // --- BARU: Method untuk Reset Percobaan Mahasiswa ---
   Future<void> resetAttempt(int sessionId) async {
     await _dio.delete('lecturer/sessions/$sessionId/reset');
   }
@@ -68,14 +67,22 @@ class LecturerService {
     required String title,
     required String filePath,
   }) async {
-    // Gunakan FormData untuk mengirim file fisik (Multipart)
     FormData formData = FormData.fromMap({
       'topic_id': topicId,
       'title': title,
       'pdf_file': await MultipartFile.fromFile(filePath, filename: 'materi.pdf'),
     });
-
     await _dio.post('lecturer/materials', data: formData);
+  }
+
+  // ← BARU: Jadikan assignment sebagai placement test
+  Future<void> setPlacementAssignment(int assignmentId) async {
+    await _dio.post('lecturer/assignments/$assignmentId/set-placement');
+  }
+
+  Future<List<dynamic>> getPlacementResults() async {
+    final response = await _dio.get('lecturer/placement/results');
+    return response.data;
   }
 }
 

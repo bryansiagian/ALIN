@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/auth/provider/auth_provider.dart';
 import 'package:flutter_math/features/exam/service/lecturer_service.dart';
@@ -63,56 +64,26 @@ class _AssignmentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext _) {
+    final placementAssignment =
+        assignments.where((a) => a.isPlacement == true).firstOrNull;
+    final regularAssignments =
+        assignments.where((a) => a.isPlacement != true).toList();
+
     return RefreshIndicator(
       color: const Color(0xFF2D6EE8),
       onRefresh: () => ref.refresh(myAssignmentsProvider.future),
-      child: ListView.builder(
+      child: ListView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        itemCount: assignments.length + 1,
-        itemBuilder: (ctx, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xFF4B8EFF), Color(0xFF1A5FD4)],
-                      ),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    "Daftar Kuis",
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F2D6B),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    "${assignments.length} kuis",
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            );
-          }
-          final task = assignments[index - 1];
-          return _AssignmentCard(
-            task: task,
-            onViewResults: () => _showResults(
-                context, ref, lecturerService, task.id),
-            onViewQuestions: () => Navigator.push(
+        children: [
+          // ── Placement Test Section ──────────────────────────────
+          _PlacementSection(
+            placementAssignment: placementAssignment,
+            onSetPlacement: (task) =>
+                _confirmSetPlacement(context, ref, lecturerService, task),
+            onViewResults: (_) =>
+                _showPlacementResults(context, lecturerService),
+            onViewQuestions: (task) => Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => AssignmentQuestionsScreen(
@@ -121,19 +92,465 @@ class _AssignmentList extends StatelessWidget {
                 ),
               ),
             ),
-          );
-        },
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Regular Assignments Header ──────────────────────────
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF4B8EFF), Color(0xFF1A5FD4)],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Daftar Kuis",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F2D6B),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                "${regularAssignments.length} kuis",
+                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // ── Regular Assignment Cards ────────────────────────────
+          if (regularAssignments.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  "Belum ada kuis reguler.\nBuat kuis baru dengan tombol + di bawah.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                ),
+              ),
+            )
+          else
+            ...regularAssignments.map((task) => _AssignmentCard(
+                  task: task,
+                  onViewResults: () =>
+                      _showQuizResults(context, lecturerService, task.id),
+                  onViewQuestions: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AssignmentQuestionsScreen(
+                        assignmentId: task.id,
+                        title: task.title,
+                      ),
+                    ),
+                  ),
+                  onSetPlacement: () =>
+                      _confirmSetPlacement(context, ref, lecturerService, task),
+                )),
+        ],
       ),
     );
   }
 
-  void _showResults(BuildContext ctx, WidgetRef ref,
-      LecturerService service, int id) {
+  // Hasil placement test — pakai sheet khusus
+  void _showPlacementResults(BuildContext ctx, LecturerService service) {
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PlacementResultsSheet(service: service),
+    );
+  }
+
+  // Hasil kuis reguler — pakai sheet lama
+  void _showQuizResults(BuildContext ctx, LecturerService service, int id) {
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ResultsSheet(service: service, assignmentId: id),
+    );
+  }
+
+  void _confirmSetPlacement(BuildContext ctx, WidgetRef ref,
+      LecturerService service, dynamic task) {
+    if (task.isPlacement == true) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Text('Kuis ini sudah menjadi Placement Test.'),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1A5FD4),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: ctx,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SetPlacementSheet(
+        title: task.title,
+        onConfirm: () async {
+          Navigator.pop(ctx);
+          try {
+            await service.setPlacementAssignment(task.id);
+            HapticFeedback.lightImpact();
+            ref.refresh(myAssignmentsProvider);
+            if (ctx.mounted) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded,
+                          color: Colors.white, size: 18),
+                      SizedBox(width: 10),
+                      Text('Berhasil dijadikan Placement Test!'),
+                    ],
+                  ),
+                  backgroundColor: const Color(0xFF1A8A5A),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            }
+          } catch (e) {
+            if (ctx.mounted) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: Text('Gagal: $e'),
+                  backgroundColor: Colors.red.shade700,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+}
+
+// ── Placement Test Section ────────────────────────────────────────────────────
+class _PlacementSection extends StatelessWidget {
+  final dynamic placementAssignment;
+  final void Function(dynamic task) onSetPlacement;
+  final void Function(int id) onViewResults;
+  final void Function(dynamic task) onViewQuestions;
+
+  const _PlacementSection({
+    required this.placementAssignment,
+    required this.onSetPlacement,
+    required this.onViewResults,
+    required this.onViewQuestions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 18,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF818CF8), Color(0xFF6366F1)],
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              "Placement Test",
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F2D6B),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: placementAssignment != null
+                    ? const Color(0xFFEEF2FF)
+                    : const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                placementAssignment != null ? "Aktif" : "Belum diset",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: placementAssignment != null
+                      ? const Color(0xFF6366F1)
+                      : const Color(0xFFE65100),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (placementAssignment == null)
+          _PlacementBanner()
+        else
+          _PlacementActiveCard(
+            task: placementAssignment,
+            onViewResults: () => onViewResults(placementAssignment.id),
+            onViewQuestions: () => onViewQuestions(placementAssignment),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Placement Banner ──────────────────────────────────────────────────────────
+class _PlacementBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF0),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+            color: const Color(0xFFFFE082).withOpacity(0.8), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFB300).withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.info_outline_rounded,
+                color: Color(0xFFE65100), size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Belum ada Placement Test aktif",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                    color: Color(0xFF4A2C00),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Pilih salah satu kuis di bawah, lalu ketuk ⋯ → \"Jadikan Placement Test\" agar mahasiswa baru dapat mengikutinya saat pertama login.",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.brown.shade400,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Placement Active Card ─────────────────────────────────────────────────────
+class _PlacementActiveCard extends StatelessWidget {
+  final dynamic task;
+  final VoidCallback onViewResults;
+  final VoidCallback onViewQuestions;
+
+  const _PlacementActiveCard({
+    required this.task,
+    required this.onViewResults,
+    required this.onViewQuestions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6366F1).withOpacity(0.30),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(Icons.schema_rounded,
+                    color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${task.questionCount} soal · ${task.durationMinutes} menit",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.75),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.verified_rounded,
+                        color: Colors.white, size: 12),
+                    SizedBox(width: 4),
+                    Text(
+                      "Aktif",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _PlacementActionBtn(
+                  icon: Icons.list_alt_rounded,
+                  label: "Lihat Soal",
+                  onTap: onViewQuestions,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PlacementActionBtn(
+                  icon: Icons.bar_chart_rounded,
+                  label: "Lihat Hasil",
+                  onTap: onViewResults,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlacementActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _PlacementActionBtn({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.16),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: Colors.white.withOpacity(0.25), width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 15),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -143,11 +560,13 @@ class _AssignmentCard extends StatefulWidget {
   final dynamic task;
   final VoidCallback onViewResults;
   final VoidCallback onViewQuestions;
+  final VoidCallback onSetPlacement;
 
   const _AssignmentCard({
     required this.task,
     required this.onViewResults,
     required this.onViewQuestions,
+    required this.onSetPlacement,
   });
 
   @override
@@ -187,11 +606,9 @@ class _AssignmentCardState extends State<_AssignmentCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Top row ────────────────────────────────────────
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Icon badge
                     Container(
                       width: 46,
                       height: 46,
@@ -202,23 +619,24 @@ class _AssignmentCardState extends State<_AssignmentCard> {
                           colors: isSafe
                               ? [
                                   const Color(0xFFFF6B6B),
-                                  const Color(0xFFE53935)
+                                  const Color(0xFFE53935),
                                 ]
                               : [
                                   const Color(0xFF4B8EFF),
-                                  const Color(0xFF1A5FD4)
+                                  const Color(0xFF1A5FD4),
                                 ],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
-                        isSafe ? Icons.security_rounded : Icons.assignment_rounded,
+                        isSafe
+                            ? Icons.security_rounded
+                            : Icons.assignment_rounded,
                         color: Colors.white,
                         size: 22,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Title + badge
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,45 +650,75 @@ class _AssignmentCardState extends State<_AssignmentCard> {
                             ),
                           ),
                           const SizedBox(height: 5),
-                          Row(
+                          Wrap(
+                            spacing: 6,
                             children: [
                               if (isSafe)
                                 _Badge(
-                                    label: "Safe Exam",
-                                    color: const Color(0xFFFFEBEE),
-                                    textColor: const Color(0xFFE53935)),
-                              if (!isSafe)
+                                  label: "Safe Exam",
+                                  color: const Color(0xFFFFEBEE),
+                                  textColor: const Color(0xFFE53935),
+                                )
+                              else
                                 _Badge(
-                                    label: "Reguler",
-                                    color: const Color(0xFFEEF4FF),
-                                    textColor: const Color(0xFF2D6EE8)),
+                                  label: "Reguler",
+                                  color: const Color(0xFFEEF4FF),
+                                  textColor: const Color(0xFF2D6EE8),
+                                ),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    // Menu
                     _ContextMenu(
                       onViewResults: widget.onViewResults,
                       onViewQuestions: widget.onViewQuestions,
+                      onSetPlacement: widget.onSetPlacement,
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 12),
                 Container(height: 1, color: const Color(0xFFEEF4FF)),
                 const SizedBox(height: 10),
-
-                // ── Deadline ───────────────────────────────────────
                 Row(
                   children: [
                     const Icon(Icons.schedule_rounded,
                         size: 14, color: Color(0xFF4B8EFF)),
                     const SizedBox(width: 5),
-                    Text(
-                      "Deadline: ${task.deadline}",
-                      style: TextStyle(
-                          fontSize: 12.5, color: Colors.grey[600]),
+                    Flexible(
+                      child: Text(
+                        "Deadline: ${task.deadline}",
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: widget.onSetPlacement,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.schema_rounded,
+                                size: 11, color: Color(0xFF6366F1)),
+                            SizedBox(width: 4),
+                            Text(
+                              "Set Placement",
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: Color(0xFF6366F1),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -288,22 +736,22 @@ class _Badge extends StatelessWidget {
   final String label;
   final Color color;
   final Color textColor;
-  const _Badge(
-      {required this.label,
-      required this.color,
-      required this.textColor});
+
+  const _Badge({
+    required this.label,
+    required this.color,
+    required this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-          color: color, borderRadius: BorderRadius.circular(7)),
+      decoration:
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(7)),
       child: Text(label,
           style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: textColor)),
+              fontSize: 11, fontWeight: FontWeight.w600, color: textColor)),
     );
   }
 }
@@ -312,8 +760,13 @@ class _Badge extends StatelessWidget {
 class _ContextMenu extends StatelessWidget {
   final VoidCallback onViewResults;
   final VoidCallback onViewQuestions;
-  const _ContextMenu(
-      {required this.onViewResults, required this.onViewQuestions});
+  final VoidCallback onSetPlacement;
+
+  const _ContextMenu({
+    required this.onViewResults,
+    required this.onViewQuestions,
+    required this.onSetPlacement,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -321,6 +774,7 @@ class _ContextMenu extends StatelessWidget {
       onSelected: (val) {
         if (val == 'results') onViewResults();
         if (val == 'questions') onViewQuestions();
+        if (val == 'placement') onSetPlacement();
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       icon: Container(
@@ -333,33 +787,210 @@ class _ContextMenu extends StatelessWidget {
             color: Color(0xFF4B8EFF), size: 18),
       ),
       itemBuilder: (_) => [
-        PopupMenuItem(
+        const PopupMenuItem(
           value: 'results',
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.bar_chart_rounded,
                   color: Color(0xFF2D6EE8), size: 18),
               SizedBox(width: 10),
-              Text("Lihat Hasil & Skor",
-                  style: TextStyle(
-                      fontSize: 13.5, color: Color(0xFF0F2D6B))),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Lihat Hasil & Skor",
+                      style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F2D6B))),
+                  Text("Lihat skor tiap mahasiswa",
+                      style:
+                          TextStyle(fontSize: 11, color: Color(0xFF8A9BB5))),
+                ],
+              ),
             ],
           ),
         ),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: 'questions',
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.list_alt_rounded,
                   color: Color(0xFF2D6EE8), size: 18),
               SizedBox(width: 10),
-              Text("Lihat Soal",
-                  style: TextStyle(
-                      fontSize: 13.5, color: Color(0xFF0F2D6B))),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Lihat Soal",
+                      style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F2D6B))),
+                  Text("Edit atau tambah soal",
+                      style:
+                          TextStyle(fontSize: 11, color: Color(0xFF8A9BB5))),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: 'placement',
+          child: Row(
+            children: [
+              Icon(Icons.schema_rounded, color: Color(0xFF6366F1), size: 18),
+              SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Jadikan Placement Test",
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6366F1),
+                    ),
+                  ),
+                  Text(
+                    "Kuis ini akan dipakai mahasiswa baru",
+                    style: TextStyle(fontSize: 11, color: Color(0xFF8A9BB5)),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Set Placement Confirmation Sheet ─────────────────────────────────────────
+class _SetPlacementSheet extends StatelessWidget {
+  final String title;
+  final VoidCallback onConfirm;
+
+  const _SetPlacementSheet({
+    required this.title,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEEF2FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.schema_rounded,
+                  color: Color(0xFF6366F1), size: 32),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Jadikan Placement Test?',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F2D6B),
+              ),
+            ),
+            const SizedBox(height: 10),
+            RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: TextStyle(
+                    color: Colors.grey.shade600, fontSize: 13, height: 1.6),
+                children: [
+                  const TextSpan(text: 'Kuis '),
+                  TextSpan(
+                    text: '"$title"',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F2D6B),
+                    ),
+                  ),
+                  const TextSpan(
+                    text:
+                        ' akan dijadikan placement test.\n\nMahasiswa baru akan mengerjakan kuis ini saat pertama kali login. Placement test sebelumnya (jika ada) akan otomatis dinonaktifkan.',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Center(
+                        child: Text('Batal',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F2D6B))),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onConfirm,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF818CF8), Color(0xFF6366F1)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6366F1).withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text('Ya, Jadikan!',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -395,7 +1026,7 @@ class _CreateFAB extends StatelessWidget {
             Icon(Icons.add_rounded, color: Colors.white, size: 20),
             SizedBox(width: 8),
             Text(
-              "Buat Kuis SEB",
+              "Buat Kuis",
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -409,12 +1040,10 @@ class _CreateFAB extends StatelessWidget {
   }
 }
 
-// ── Results Bottom Sheet ──────────────────────────────────────────────────────
-class _ResultsSheet extends StatelessWidget {
+// ── Placement Results Sheet (khusus placement) ────────────────────────────────
+class _PlacementResultsSheet extends StatelessWidget {
   final LecturerService service;
-  final int assignmentId;
-  const _ResultsSheet(
-      {required this.service, required this.assignmentId});
+  const _PlacementResultsSheet({required this.service});
 
   @override
   Widget build(BuildContext context) {
@@ -426,7 +1055,265 @@ class _ResultsSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Handle + header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: Column(
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.schema_rounded,
+                          color: Color(0xFF6366F1), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      "Hasil Placement Test",
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F2D6B),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(height: 1, color: const Color(0xFFEEF4FF)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder(
+              future: service.getPlacementResults(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                        color: Color(0xFF6366F1), strokeWidth: 3),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(Icons.cloud_off_rounded,
+                                color: Color(0xFFE53935), size: 32),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text("Gagal memuat data",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F2D6B))),
+                          const SizedBox(height: 6),
+                          Text(snapshot.error.toString(),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500])),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                final data = snapshot.data as List? ?? [];
+                if (data.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEEF2FF),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(Icons.people_outline_rounded,
+                              color: Color(0xFF6366F1), size: 32),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Belum ada mahasiswa",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F2D6B)),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          "Belum ada mahasiswa yang\nmenyelesaikan placement test.",
+                          textAlign: TextAlign.center,
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  itemCount: data.length,
+                  itemBuilder: (ctx, i) {
+                    final item = data[i];
+                    final user = item['user'];
+                    final score =
+                        (item['score'] as num?)?.toDouble() ?? 0;
+                    final grade = item['grade'] as String? ?? '-';
+                    final initial =
+                        (user['name'] as String)[0].toUpperCase();
+                    final gradeColor = _gradeColor(grade);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FBFF),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: const Color(0xFFDCEAFF), width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          // Avatar
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF818CF8),
+                                  Color(0xFF6366F1)
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            child: Center(
+                              child: Text(
+                                initial,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Nama & skor
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user['name'],
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13.5,
+                                      color: Color(0xFF0F2D6B)),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.score_rounded,
+                                        size: 13,
+                                        color: Color(0xFF6366F1)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "Nilai: ${score.toStringAsFixed(1)}",
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Grade badge
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: gradeColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                grade,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: gradeColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _gradeColor(String grade) {
+    switch (grade) {
+      case 'A':  return const Color(0xFFF59E0B);
+      case 'AB': return const Color(0xFF10B981);
+      case 'B':  return const Color(0xFF1A56DB);
+      case 'BC': return const Color(0xFF6366F1);
+      case 'C':  return const Color(0xFF8B5CF6);
+      case 'D':  return const Color(0xFFF97316);
+      default:   return const Color(0xFFEF4444);
+    }
+  }
+}
+
+// ── Quiz Results Sheet (kuis reguler) ─────────────────────────────────────────
+class _ResultsSheet extends StatelessWidget {
+  final LecturerService service;
+  final int assignmentId;
+  const _ResultsSheet({required this.service, required this.assignmentId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.82,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Column(
@@ -469,8 +1356,6 @@ class _ResultsSheet extends StatelessWidget {
               ],
             ),
           ),
-
-          // List
           Expanded(
             child: FutureBuilder(
               future: service.getAssignmentResults(assignmentId),
@@ -506,7 +1391,6 @@ class _ResultsSheet extends StatelessWidget {
                     ),
                   );
                 }
-
                 return ListView.builder(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -557,8 +1441,7 @@ class _ResultsSheet extends StatelessWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(user['name'],
                                       style: const TextStyle(
@@ -644,7 +1527,6 @@ class _AttemptsSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header
           Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -671,10 +1553,7 @@ class _AttemptsSheet extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFF4B8EFF),
-                            Color(0xFF1A5FD4)
-                          ],
+                          colors: [Color(0xFF4B8EFF), Color(0xFF1A5FD4)],
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -714,8 +1593,6 @@ class _AttemptsSheet extends StatelessWidget {
               ],
             ),
           ),
-
-          // List
           Expanded(
             child: ListView.builder(
               physics: const BouncingScrollPhysics(),
@@ -733,8 +1610,7 @@ class _AttemptsSheet extends StatelessWidget {
                 else scoreColor = const Color(0xFFE53935);
 
                 return GestureDetector(
-                  onTap: () =>
-                      _showAnswers(ctx, session['answers']),
+                  onTap: () => _showAnswers(ctx, session['answers']),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.symmetric(
@@ -744,8 +1620,7 @@ class _AttemptsSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              const Color(0xFF4B8EFF).withOpacity(0.06),
+                          color: const Color(0xFF4B8EFF).withOpacity(0.06),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -753,7 +1628,6 @@ class _AttemptsSheet extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        // Score bubble
                         Container(
                           width: 50,
                           height: 50,
@@ -775,8 +1649,7 @@ class _AttemptsSheet extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 "Percobaan ke-$attemptNum",
@@ -795,7 +1668,7 @@ class _AttemptsSheet extends StatelessWidget {
                                       label: "$violations Pelanggaran",
                                     )
                                   else
-                                    _MiniStat(
+                                    const _MiniStat(
                                       icon: Icons.verified_rounded,
                                       label: "Tanpa Pelanggaran",
                                     ),
@@ -811,10 +1684,8 @@ class _AttemptsSheet extends StatelessWidget {
                             color: const Color(0xFFF0F6FF),
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          child: const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 13,
-                              color: Color(0xFF4B8EFF)),
+                          child: const Icon(Icons.arrow_forward_ios_rounded,
+                              size: 13, color: Color(0xFF4B8EFF)),
                         ),
                       ],
                     ),
@@ -856,7 +1727,6 @@ class _AnswersSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Column(
@@ -910,8 +1780,6 @@ class _AnswersSheet extends StatelessWidget {
               ],
             ),
           ),
-
-          // Answer list
           Expanded(
             child: ListView.builder(
               physics: const BouncingScrollPhysics(),
@@ -940,7 +1808,6 @@ class _AnswersSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Question text + result icon
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -976,7 +1843,6 @@ class _AnswersSheet extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      // Answers
                       _AnswerRow(
                           label: "Jawaban",
                           value: ans['user_answer'],
@@ -1074,7 +1940,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              "Buat kuis pertamamu dan mulai menilai mahasiswa.",
+              "Buat kuis pertama, lalu jadikan salah satunya sebagai Placement Test untuk mahasiswa baru.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey[500]),
             ),

@@ -9,11 +9,11 @@ class AssignmentModel {
   final int questionCount;
   final bool isSafeExam;
   final String status;
-  // --- FIELD BARU ---
   final bool allowReattempt;
   final int attemptLimit;
   final bool showResults;
-  final int examSessionsCount; // Menghitung berapa kali mahasiswa sudah mengerjakan
+  final int examSessionsCount;
+  final bool isPlacement; // ← BARU
 
   AssignmentModel({
     required this.id,
@@ -30,6 +30,7 @@ class AssignmentModel {
     required this.attemptLimit,
     required this.showResults,
     required this.examSessionsCount,
+    required this.isPlacement, // ← BARU
   });
 
   factory AssignmentModel.fromJson(Map<String, dynamic> json) {
@@ -44,11 +45,11 @@ class AssignmentModel {
       questionCount: json['question_count'],
       isSafeExam: json['is_safe_exam'] == 1 || json['is_safe_exam'] == true,
       status: json['status'],
-      // --- MAPPING JSON BARU ---
       allowReattempt: json['allow_reattempt'] == 1 || json['allow_reattempt'] == true,
       attemptLimit: json['attempt_limit'] ?? 1,
       showResults: json['show_results'] == 1 || json['show_results'] == true,
       examSessionsCount: json['exam_sessions_count'] ?? 0,
+      isPlacement: json['is_placement'] == 1 || json['is_placement'] == true, // ← BARU
     );
   }
 }
