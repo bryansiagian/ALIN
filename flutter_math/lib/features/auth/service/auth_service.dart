@@ -18,7 +18,7 @@ class AuthService {
         'user': UserModel.fromJson(response.data['user']),
       };
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Gagal login';
+      throw e.response?.data['message'] ?? e.message ?? e.type.toString();
     }
   }
 
