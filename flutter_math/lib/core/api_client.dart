@@ -10,7 +10,7 @@ final dioProvider = Provider<Dio>((ref) {
   final storage = ref.watch(storageProvider);
   
   final dio = Dio(BaseOptions(
-    baseUrl: 'http://10.0.2.2:8000/api/', // IP Emulator
+    baseUrl: 'https://9ide6w2asa.ap-southeast-2.awsapprunner.com/api/', // IP Emulator
     headers: {
       'Accept': 'application/json',
     },
