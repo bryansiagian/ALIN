@@ -4,6 +4,7 @@ import 'package:flutter_math/features/learning/provider/learning_provider.dart';
 import 'package:flutter_math/features/learning/screen/material_detail_screen.dart';
 import 'package:flutter_math/features/auth/provider/auth_provider.dart';
 import 'package:flutter_math/features/exam/screen/assignment_list_screen.dart';
+import 'package:flutter_math/features/learning/screen/level_map_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -137,6 +138,18 @@ class HomeScreen extends ConsumerWidget {
                           builder: (_) => const AssignmentListScreen()),
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  _LevelMapBanner(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LevelMapScreen(),
+                      ), // Ini rute menuju petamu!
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
 
                   // ── Section Title ────────────────────────────────
@@ -337,6 +350,94 @@ class _AssignmentBanner extends StatelessWidget {
                 "Buka",
                 style: TextStyle(
                   color: Color(0xFF1A5FD4),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Level Map Banner (Pintu Menuju Peta Zig-Zag) ─────────────────────────
+class _LevelMapBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _LevelMapBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            // Warna toska/cyan agar berbeda dengan banner tugas
+            colors: [Color(0xFF34B3F1), Color(0xFF1A90A8)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1A90A8).withOpacity(0.30),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.20),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.map_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Peta Perjalanan Aljabar",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    "Belajar seru dan raih apimu!",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.80),
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                "Mulai",
+                style: TextStyle(
+                  color: Color(0xFF1A90A8),
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),

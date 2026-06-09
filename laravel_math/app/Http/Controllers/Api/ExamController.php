@@ -36,14 +36,47 @@ class ExamController extends Controller
             $user       = $request->user();
             $assignment = Assignment::with('questions')->findOrFail($assignmentId);
 
-            // 1. Cek apakah ada sesi ongoing yang belum disubmit
+            $sekarang = now();
+
+            if ($assignment->start_time && $sekarang->lessThan($assignment->start_time)) {
+                return response()->json([
+                    'message' => 'Ujian belum dimulai. Silakan tunggu sampai waktu yang ditentukan.'
+                ], 403);
+            }
+
+            if ($assignment->deadline && $sekarang->greaterThan($assignment->deadline)) {
+                return response()->json([
+                    'message' => 'Waktu ujian sudah berakhir. Anda tidak bisa lagi mengakses ujian ini.'
+                ], 403);
+            }
+
+            // --- LOGIKA PEMBELAJARAN ADAPTIF (ADAPTIVE LEARNING) ---
+            // 1. Intip rapor ujian penempatan milik mahasiswa ini
+            $placement = \App\Models\PlacementResult::where('user_id', $user->id)->first();
+
+            // 2. Tentukan jalur kesulitannya menggunakan fungsi yang tadi kita buat
+            // Jika dia belum ikut placement (atau ini kuis biasa tanpa syarat), paksa ke jalur 'easy'
+            $tier = $placement
+                ? \App\Http\Controllers\Api\PlacementController::getAdaptiveDifficulty($placement->grade)
+                : 'easy';
+
+            // 3. Filter soal di dalam Koper ini agar HANYA mengeluarkan soal sesuai levelnya
+            $adaptiveQuestions = $assignment->questions()->where('difficulty', $tier)->inRandomOrder()->get();
+
+            // 4. PERTAHANAN SISTEM: Jika Dosen lupa memasukkan soal dengan tingkat kesulitan tersebut,
+            // keluarkan saja semua soal yang ada agar layar Flutter tidak nge-blank (crash).
+            if ($adaptiveQuestions->isEmpty()) {
+                $adaptiveQuestions = $assignment->questions;
+            }
+            // --------------------------------------------------------
+
+            // Cek apakah ada sesi ongoing yang belum disubmit
             $activeSession = ExamSession::where('assignment_id', $assignmentId)
                 ->where('user_id', $user->id)
                 ->where('status', 'ongoing')
                 ->first();
 
             if ($activeSession) {
-                // Jika sesi aktif sudah dikunci, tolak akses
                 if ($activeSession->is_locked) {
                     return response()->json([
                         'message' => 'Sesi ujian Anda telah dikunci karena pelanggaran.'
@@ -53,24 +86,24 @@ class ExamController extends Controller
                 return response()->json([
                     'session'    => $activeSession,
                     'assignment' => $assignment,
-                    'questions'  => $assignment->questions,
+                    'questions'  => $adaptiveQuestions, // Gunakan soal yang sudah disaring!
                 ]);
             }
 
-            // 2. Hitung percobaan yang sudah selesai
+            // Hitung percobaan yang sudah selesai
             $completedCount = ExamSession::where('assignment_id', $assignmentId)
                 ->where('user_id', $user->id)
                 ->where('status', 'submitted')
                 ->count();
 
-            // 3. Cek jatah percobaan
+            // Cek jatah percobaan
             if ($completedCount >= $assignment->attempt_limit) {
                 return response()->json([
                     'message' => "Jatah percobaan Anda sudah habis ({$completedCount}/{$assignment->attempt_limit})."
                 ], 403);
             }
 
-            // 4. Buat sesi baru
+            // Buat sesi baru
             $session = ExamSession::create([
                 'assignment_id'   => $assignmentId,
                 'user_id'         => $user->id,
@@ -84,9 +117,8 @@ class ExamController extends Controller
             return response()->json([
                 'session'    => $session,
                 'assignment' => $assignment,
-                'questions'  => $assignment->questions,
+                'questions'  => $adaptiveQuestions, // Gunakan soal yang sudah disaring!
             ]);
-
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error: ' . $e->getMessage()], 500);
         }
@@ -172,6 +204,32 @@ class ExamController extends Controller
                 'total_score'  => $request->total_score ?? 0,
                 'status'       => 'submitted',
             ]);
+
+            // 3. LOGIKA STREAK HARIAN (BUKU ABSEN)
+            $hariIni = now()->toDateString();
+            $streak = \App\Models\UserStreak::firstOrCreate(
+                ['user_id' => $session->user_id],
+                ['current_streak' => 0, 'longest_streak' => 0, 'last_active_date' => null]
+            );
+
+            // Jika dia belum pernah belajar, atau terakhir belajar sebelum hari ini
+            if ($streak->last_active_date !== $hariIni) {
+                // Cek apakah terakhir belajar adalah KEMARIN (lanjutkan api)
+                if ($streak->last_active_date === now()->subDay()->toDateString()) {
+                    $streak->current_streak += 1;
+                } else {
+                    // Bolos, api reset dari 1
+                    $streak->current_streak = 1;
+                }
+
+                // Cek rekor terpanjang
+                if ($streak->current_streak > $streak->longest_streak) {
+                    $streak->longest_streak = $streak->current_streak;
+                }
+
+                $streak->last_active_date = $hariIni;
+                $streak->save();
+            }
 
             return response()->json(['message' => 'Jawaban berhasil disimpan.']);
         });

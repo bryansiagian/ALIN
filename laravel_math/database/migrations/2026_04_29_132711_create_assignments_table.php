@@ -17,7 +17,8 @@ return new class extends Migration
             $table->foreignId('topic_id')->constrained('topics')->onDelete('cascade');
             $table->string('title');
             $table->text('description')->nullable();
-            $table->timestamp('deadline'); // Sesuai DBML
+            $table->timestamp('start_time')->nullable();
+            $table->timestamp('deadline'); 
             $table->integer('duration_minutes');
             $table->integer('question_count');
             $table->boolean('is_safe_exam')->default(false);

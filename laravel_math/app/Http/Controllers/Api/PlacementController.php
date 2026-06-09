@@ -15,6 +15,8 @@ class PlacementController extends Controller
      * Ambil soal placement test.
      * Hanya bisa diakses jika belum pernah mengerjakan placement test.
      */
+
+    /*
     public function getPlacementTest(Request $request)
     {
         $user = $request->user();
@@ -43,10 +45,43 @@ class PlacementController extends Controller
             'questions'  => $assignment->questions,
         ]);
     }
+    */
+
+    public function getPlacementTest(Request $request)
+    {
+        // ID 6 adalah ID rak Placement Test yang baru saja kita buat
+        $placementTopicId = 6;
+
+        // 1. Mengambil soal dengan filter ganda (Topic ID 6 + Difficulty)
+        $easy = \App\Models\QuestionBank::where('topic_id', $placementTopicId)
+            ->where('difficulty', 'easy')
+            ->inRandomOrder()->limit(3)->get();
+
+        $medium = \App\Models\QuestionBank::where('topic_id', $placementTopicId)
+            ->where('difficulty', 'medium')
+            ->inRandomOrder()->limit(4)->get();
+
+        $hard = \App\Models\QuestionBank::where('topic_id', $placementTopicId)
+            ->where('difficulty', 'hard')
+            ->inRandomOrder()->limit(3)->get();
+
+        // 2. Gabungkan hasil dari ketiga kategori
+        $questions = $easy->concat($medium)->concat($hard)->shuffle();
+
+        // 3. Pastikan jumlah soal cukup (jika tidak, kirim error)
+        if ($questions->count() < 10) {
+            return response()->json(['message' => 'Jumlah soal tidak mencukupi di database!'], 404);
+        }
+
+        return response()->json([
+            'questions' => $questions,
+        ]);
+    }
 
     /**
      * Submit jawaban placement test dan hitung grade.
      */
+    /*
     public function submitPlacementTest(Request $request)
     {
         $user = $request->user();
@@ -108,6 +143,61 @@ class PlacementController extends Controller
                 'message'       => 'Placement test berhasil diselesaikan.',
             ]);
         });
+    }
+    */
+    public function submitPlacementTest(Request $request)
+    {
+        // 1. Validasi input dari Flutter
+        $request->validate([
+            'answers' => 'required|array',
+            'answers.*.question_id' => 'required|exists:question_banks,id',
+            'answers.*.selected_option' => 'required|string|max:1',
+        ]);
+
+        $answers = $request->input('answers');
+        $correctCount = 0;
+        $totalQuestions = count($answers);
+
+        // 2. Hitung jumlah jawaban yang benar
+        foreach ($answers as $answer) {
+            $question = \App\Models\QuestionBank::find($answer['question_id']);
+
+            if ($question && strtoupper($question->correct_answer) === strtoupper($answer['selected_option'])) {
+                $correctCount++;
+            }
+        }
+
+        // 3. Kalkulasi nilai murni (Skor 0 - 100)
+        $score = $totalQuestions > 0 ? ($correctCount / $totalQuestions) * 100 : 0;
+
+        // 4. Penentuan Level Terbuka berdasarkan rekomendasi matriks adaptif
+        if ($score >= 91) {
+            $unlockedLevel = 50;
+        } elseif ($score >= 76) {
+            $unlockedLevel = 35;
+        } elseif ($score >= 61) {
+            $unlockedLevel = 20;
+        } elseif ($score >= 41) {
+            $unlockedLevel = 10;
+        } else {
+            $unlockedLevel = 1;
+        }
+
+        // 5. Kunci hasil ke dalam database menggunakan Query Builder agar aman dari kendala Model Missing
+        DB::table('placement_results')->insert([
+            'user_id' => $request->user()->id, // Mengambil ID siswa yang sedang login via Sanctum
+            'score' => $score,
+            'unlocked_level' => $unlockedLevel,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // 6. Kirim respons balik ke Flutter
+        return response()->json([
+            'message' => 'Placement test berhasil diselesaikan!',
+            'score' => $score,
+            'unlocked_level' => $unlockedLevel,
+        ], 200);
     }
 
     /**
@@ -186,5 +276,17 @@ class PlacementController extends Controller
             ]);
 
         return response()->json($results);
+    }
+
+    /**
+     * Menerjemahkan grade placement menjadi tingkat kesulitan kuis adaptif.
+     */
+    public static function getAdaptiveDifficulty(string $grade): string
+    {
+        return match ($grade) {
+            'A', 'AB' => 'hard',
+            'B', 'BC' => 'medium',
+            default   => 'easy',
+        };
     }
 }

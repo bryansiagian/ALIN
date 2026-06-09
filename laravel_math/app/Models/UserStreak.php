@@ -6,8 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserStreak extends Model
 {
-    protected $fillable = ['user_id', 'current_streak', 'last_activity_date'];
-    protected $casts = ['last_activity_date' => 'date'];
+    // PERBAIKAN: Samakan nama dengan yang ada di tabel database (last_active_date)
+    // Saya juga menambahkan longest_streak agar rekor apinya bisa tersimpan
+    protected $fillable = ['user_id', 'current_streak', 'longest_streak', 'last_active_date'];
 
-    public function user() { return $this->belongsTo(User::class); }
+    protected $casts = ['last_active_date' => 'date'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

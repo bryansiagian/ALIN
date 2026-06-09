@@ -23,4 +23,13 @@ class LearningService {
     final response = await _dio.get(ApiEndpoints.formulas);
     return (response.data as List).map((e) => FormulaModel.fromJson(e)).toList();
   }
+
+  Future<List<dynamic>> fetchTopics() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.topics);
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ?? 'Gagal memuat peta harta karun';
+    }
+  }
 }

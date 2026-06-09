@@ -26,6 +26,9 @@ Route::post('/login',    [AuthController::class, 'login']);
 */
 Route::middleware('auth:sanctum')->group(function () {
 
+    Route::get('/levels/{level}/questions', [App\Http\Controllers\Api\LevelController::class, 'getQuestionsByLevel']);
+    Route::post('/levels/submit', [App\Http\Controllers\Api\LevelController::class, 'submitLevelResult']);
+
     // User Profile & Auth
     Route::get('/me',     [AuthController::class, 'me']);
     Route::post('/logout',[AuthController::class, 'logout']);
@@ -84,9 +87,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/topics-list',              [LecturerController::class, 'getTopics']);
         Route::post('/topics',                  [LecturerController::class, 'storeTopic']);
         Route::post('/materials',               [LecturerController::class, 'storeMaterial']);
-
-        // ── Placement Test (Lecturer) ─────────────────────────────────
         Route::post('/assignments/{id}/set-placement', [PlacementController::class, 'setPlacementAssignment']);
         Route::get('/placement/results', [PlacementController::class, 'getLecturerPlacementResults']);
+        Route::post('/questions/upload', [LecturerController::class, 'uploadQuestionsExcel']);
+
     });
 });

@@ -13,11 +13,10 @@ return new class extends Migration
     {
         Schema::create('placement_results', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('assignment_id')->constrained('assignments')->onDelete('cascade');
-            $table->decimal('score', 5, 2);       // Nilai NA (0.00 - 100.00)
-            $table->string('grade', 2);            // A, AB, B, BC, C, D, E
-            $table->timestamp('taken_at');
+            // Menghubungkan ke tabel users, jika user dihapus, data ini ikut terhapus
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->integer('score'); // Menyimpan skor 0 - 100
+            $table->integer('unlocked_level'); // Menyimpan level maks yang terbuka (1 - 50)
             $table->timestamps();
         });
     }

@@ -148,7 +148,8 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
         data: (questions) {
           if (questions.isEmpty) return _buildEmptyState();
           final q = questions[_currentIndex];
-          final options = (q['options'] as List).cast<Map<String, dynamic>>();
+          final rawOptions = q['options'] as List?;
+          final options = rawOptions?.cast<Map<String, dynamic>>() ?? [];
           final selectedAnswer = _answers[q['id']];
           final progress = (_currentIndex + 1) / questions.length;
           final answeredCount = _answers.length;
@@ -221,22 +222,59 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                             ),
                           ),
                           const SizedBox(height: 20),
-                          ...options.asMap().entries.map((entry) {
-                            final i = entry.key;
-                            final opt = entry.value;
-                            final label = opt['label'] as String? ??
-                                String.fromCharCode(65 + i);
-                            final text = opt['text'] as String? ?? '';
-                            final isSelected = selectedAnswer == label;
 
-                            return _OptionTile(
-                              label: label,
-                              text: text,
-                              isSelected: isSelected,
-                              onTap: () => _selectAnswer(q['id'], label),
-                              gradient: _grad,
-                            );
-                          }),
+                          // --- MULAI PERHATIKAN BLOK INI ---
+                          // Kita buat percabangan TEGAS: Jika ada pilihan ganda, cetak tombol. Jika tidak ada, cetak form ketik.
+                          if (options.isNotEmpty)
+                            ...options.asMap().entries.map((entry) {
+                              final i = entry.key;
+                              final opt = entry.value;
+                              final label =
+                                  opt['label'] as String? ??
+                                  String.fromCharCode(65 + i);
+                              final text = opt['text'] as String? ?? '';
+                              final isSelected = selectedAnswer == label;
+
+                              return _OptionTile(
+                                label: label,
+                                text: text,
+                                isSelected: isSelected,
+                                onTap: () => _selectAnswer(q['id'], label),
+                                gradient: _grad,
+                              );
+                            })
+                          else
+                            // JIKA KOSONG (ISIAN SINGKAT), CETAK INI:
+                            TextFormField(
+                              key: ValueKey(q['id']),
+                              initialValue: selectedAnswer,
+                              // Catatan: Jangan gunakan .trim() di onChanged, karena akan membuat kursor HP melompat/error saat mengetik spasi.
+                              onChanged: (val) => _selectAnswer(q['id'], val),
+                              decoration: InputDecoration(
+                                hintText: 'Ketik jawabanmu di sini...',
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF1A56DB),
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // --- SAMPAI SINI ---
                           const SizedBox(height: 24),
                         ],
                       ),

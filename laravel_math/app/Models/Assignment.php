@@ -11,7 +11,8 @@ class Assignment extends Model
         'topic_id',
         'title',
         'description',
-        'deadline', // Sesuai DBML
+        'start_time',
+        'deadline',
         'duration_minutes',
         'question_count',
         'is_safe_exam',
@@ -23,6 +24,7 @@ class Assignment extends Model
     ];
 
     protected $casts = [
+        'start_time' => 'datetime',
         'deadline' => 'datetime',
         'is_safe_exam' => 'boolean',
         'allow_reattempt' => 'boolean',

@@ -24,3 +24,18 @@ final materialsProvider = FutureProvider.family<List<MaterialModel>, int>((ref, 
 final formulasProvider = FutureProvider<List<FormulaModel>>((ref) async {
   return ref.watch(learningServiceProvider).getFormulas();
 });
+
+// Pipa 3: Mengambil angka progress level mahasiswa langsung dari sensor Laravel
+final progressIndexProvider = FutureProvider<int>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  try {
+    // Mengetuk pintu api/analytics
+    final response = await apiClient.dio.get('analytics');
+
+    // Ambil nilai dari laci 'user_progress_index', jika kosong berikan angka 1
+    return response.data['user_progress_index'] ?? 1;
+  } catch (e) {
+    // Jika koneksi putus atau error, kembalikan level 1 demi keamanan sistem
+    return 1;
+  }
+});

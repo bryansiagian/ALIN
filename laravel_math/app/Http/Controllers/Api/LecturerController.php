@@ -8,9 +8,10 @@ use App\Models\QuestionBank;
 use App\Models\User;
 use App\Models\ExamSession;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; // WAJIB ADA untuk Transaction
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 class LecturerController extends Controller
@@ -34,16 +35,17 @@ class LecturerController extends Controller
     }
 
     // Fungsi untuk menyimpan kuis baru (Sesuaikan nama dengan route: 'store')
+    /*
     public function store(Request $request)
     {
         try {
             $validated = $request->validate([
                 'topic_id' => 'required|exists:topics,id',
                 'title' => 'required|string',
-                'deadline' => 'required',
+                'start_time' => 'required|date',
+                'deadline' => 'required|date|after:start_time',
                 'duration_minutes' => 'required|integer',
                 'is_safe_exam' => 'required|boolean',
-                // TAMBAHKAN VALIDASI INI AGAR TIDAK DIBUANG LARAVEL:
                 'allow_reattempt' => 'required|boolean',
                 'attempt_limit' => 'required|integer|min:1',
                 'show_results' => 'required|boolean',
@@ -60,6 +62,7 @@ class LecturerController extends Controller
                     'topic_id' => $validated['topic_id'],
                     'title' => $validated['title'],
                     'description' => $request->description ?? '-',
+                    'start_time' => $request->start_time,
                     'deadline' => $validated['deadline'],
                     'duration_minutes' => $validated['duration_minutes'],
                     'question_count' => count($validated['questions']),
@@ -86,6 +89,56 @@ class LecturerController extends Controller
                 $assignment->questions()->attach($questionIds);
 
                 return response()->json(['message' => 'Kuis berhasil diterbitkan!'], 201);
+            });
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    */
+
+    public function store(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'topic_id' => 'required|exists:topics,id',
+                'title' => 'required|string',
+                'start_time' => 'required|date',
+                'deadline' => 'required|date|after:start_time',
+                'duration_minutes' => 'required|integer',
+                'is_safe_exam' => 'required|boolean',
+                'allow_reattempt' => 'required|boolean',
+                'attempt_limit' => 'required|integer|min:1',
+                'show_results' => 'required|boolean',
+
+                // PERUBAHAN MUTLAK: Sekarang Mandor hanya meminta daftar Nomor ID Soal (contoh: [1, 2, 3])
+                'questions' => 'required|array|min:1',
+                'questions.*' => 'required|exists:question_banks,id',
+            ]);
+
+            return DB::transaction(function () use ($request, $validated) {
+                $assignment = Assignment::create([
+                    'lecturer_id' => $request->user()->id,
+                    'topic_id' => $validated['topic_id'],
+                    'title' => $validated['title'],
+                    'description' => $request->description ?? '-',
+                    'start_time' => $request->start_time,
+                    'deadline' => $validated['deadline'],
+                    'duration_minutes' => $validated['duration_minutes'],
+                    'question_count' => count($validated['questions']),
+                    'is_safe_exam' => $validated['is_safe_exam'],
+                    'allow_reattempt' => $validated['allow_reattempt'],
+                    'attempt_limit' => $validated['attempt_limit'],
+                    'show_results' => $validated['show_results'],
+                    'status' => 'published',
+                ]);
+
+                // Langsung masukkan daftar soal ke dalam koper tugas
+                $assignment->questions()->attach($validated['questions']);
+
+                return response()->json([
+                    'message' => 'Kuis berhasil diterbitkan!',
+                    'assignment_id' => $assignment->id
+                ], 201);
             });
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -218,5 +271,26 @@ class LecturerController extends Controller
         ])->findOrFail($id);
 
         return response()->json($student);
+    }
+
+
+    public function uploadQuestionsExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,csv|max:2048', // Hanya terima Excel atau CSV
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\QuestionImport, $request->file('file'));
+
+            return response()->json([
+                'message' => 'Ratusan soal berhasil dimasukkan ke dalam laci!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal membaca file Excel.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

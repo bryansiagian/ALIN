@@ -1,0 +1,145 @@
+Folder PATH listing for volume New Volume
+Volume serial number is 00000042 35C4:9A10
+D:.
+¦   main.dart
+¦   Struktur_File_Pada_Lib.txt
+¦   
++---core
+¦   ¦   api_client.dart
+¦   ¦   router.dart
+¦   ¦   
+¦   +---api
+¦   ¦   ¦   api_client.dart
+¦   ¦   ¦   api_endpoints.dart
+¦   ¦   ¦   
+¦   ¦   +---interceptors
+¦   ¦           auth_interceptor.dart
+¦   ¦           
+¦   +---exceptions
+¦   ¦       api_exception.dart
+¦   ¦       
+¦   +---storage
+¦           local_storage.dart
+¦           
++---features
+¦   +---auth
+¦   ¦   +---provider
+¦   ¦   ¦       auth_provider.dart
+¦   ¦   ¦       
+¦   ¦   +---screen
+¦   ¦   ¦       login_screen.dart
+¦   ¦   ¦       
+¦   ¦   +---service
+¦   ¦           auth_service.dart
+¦   ¦           content_service.dart
+¦   ¦           
+¦   +---dashboard
+¦   ¦   +---model
+¦   ¦   ¦       progress_model.dart
+¦   ¦   ¦       
+¦   ¦   +---provider
+¦   ¦   ¦       progress_provider.dart
+¦   ¦   ¦       
+¦   ¦   +---screen
+¦   ¦   ¦       main_navigation_screen.dart
+¦   ¦   ¦       progress_screen.dart
+¦   ¦   ¦       
+¦   ¦   +---service
+¦   ¦           progress_service.dart
+¦   ¦           
+¦   +---exam
+¦   ¦   +---guard
+¦   ¦   ¦       seb_guard.dart
+¦   ¦   ¦       violation_reporter.dart
+¦   ¦   ¦       
+¦   ¦   +---screen
+¦   ¦   ¦       assignment_list_screen.dart
+¦   ¦   ¦       assignment_questions_screen.dart
+¦   ¦   ¦       create_assignment_screen.dart
+¦   ¦   ¦       create_questions_screen.dart
+¦   ¦   ¦       create_topic_screen.dart
+¦   ¦   ¦       exam_result_screen.dart
+¦   ¦   ¦       exam_screen.dart
+¦   ¦   ¦       lecturer_dashboard.dart
+¦   ¦   ¦       lecturer_dashboard_screen.dart
+¦   ¦   ¦       main_lecturer_screen.dart
+¦   ¦   ¦       student_list_screen.dart
+¦   ¦   ¦       upload_material_screen.dart
+¦   ¦   ¦       
+¦   ¦   +---service
+¦   ¦           exam_service.dart
+¦   ¦           lecturer_service.dart
+¦   ¦           seb_service.dart
+¦   ¦           
+¦   +---forum
+¦   ¦   +---model
+¦   ¦   ¦       reply_model.dart
+¦   ¦   ¦       thread_model.dart
+¦   ¦   ¦       
+¦   ¦   +---provider
+¦   ¦   ¦       forum_provider.dart
+¦   ¦   ¦       
+¦   ¦   +---screen
+¦   ¦   ¦       forum_feed_screen.dart
+¦   ¦   ¦       thread_list_screen.dart
+¦   ¦   ¦       
+¦   ¦   +---service
+¦   ¦   ¦       forum_service.dart
+¦   ¦   ¦       
+¦   ¦   +---widget
+¦   ¦           reply_card.dart
+¦   ¦           
+¦   +---gamification
+¦   ¦   +---model
+¦   ¦   ¦       badge_model.dart
+¦   ¦   ¦       leaderboard_model.dart
+¦   ¦   ¦       
+¦   ¦   +---provider
+¦   ¦   ¦       gamification_provider.dart
+¦   ¦   ¦       
+¦   ¦   +---screen
+¦   ¦   ¦       badge_gallery_screen.dart
+¦   ¦   ¦       leaderboard_screen.dart
+¦   ¦   ¦       
+¦   ¦   +---service
+¦   ¦           gamification_service.dart
+¦   ¦           
+¦   +---home
+¦   ¦       home_screen.dart
+¦   ¦       
+¦   +---learning
+¦   ¦   +---model
+¦   ¦   ¦       formula_model.dart
+¦   ¦   ¦       material_model.dart
+¦   ¦   ¦       topic_model.dart
+¦   ¦   ¦       
+¦   ¦   +---provider
+¦   ¦   ¦       learning_provider.dart
+¦   ¦   ¦       
+¦   ¦   +---screen
+¦   ¦   ¦       formula_screen_sheet.dart
+¦   ¦   ¦       material_detail_screen.dart
+¦   ¦   ¦       pdf_view_screen.dart
+¦   ¦   ¦       
+¦   ¦   +---service
+¦   ¦   ¦       learning_service.dart
+¦   ¦   ¦       
+¦   ¦   +---widget
+¦   ¦           latex_renderer.dart
+¦   ¦           
+¦   +---placement
+¦       +---provider
+¦       ¦       placement_provider.dart
+¦       ¦       
+¦       +---screen
+¦       ¦       placement_result_screen.dart
+¦       ¦       placement_screen.dart
+¦       ¦       
+¦       +---service
+¦               placement_service.dart
+¦               
++---models
+        assignment_model.dart
+        exam_model.dart
+        user_model.dart
+        
