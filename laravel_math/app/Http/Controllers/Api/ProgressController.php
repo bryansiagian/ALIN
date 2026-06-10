@@ -17,28 +17,31 @@ class ProgressController extends Controller
         $user = $request->user();
 
         // 1. Mengambil semua riwayat sesi ujian mahasiswa
-        $sessions = ExamSession::where('user_id', $user->id)
+        $sessions = \App\Models\ExamSession::where('user_id', $user->id)
             ->with(['assignment.questions', 'answers'])
             ->latest()
             ->get();
 
-        // 2. Ambil data hasil placement test terbaru dari tabel baru kita
+        // 2. Intip data hasil placement test terbaru dari tabel khusus
         $placement = DB::table('placement_results')->where('user_id', $user->id)->first();
 
-        // 3. Tentukan status & level adaptif untuk dikirim ke Flutter
+        // 3. Logika Penentuan Status & Level Adaptif Berbasis Base-100
         $hasTakenPlacement = $placement ? true : false;
         $unlockedLevel = $placement ? $placement->unlocked_level : 1; // Default level 1 jika belum tes
-        $userProgressIndex = $hasTakenPlacement ? 2 : 1; // Logika index topik lama Anda
+
+        // Hitung secara otomatis, mahasiswa berada di Bab aktif nomor berapa (1 - 9)
+        // Misal: Level 250 -> ceil(250 / 100) = Bab 3 Aktif.
+        $userProgressIndex = ceil($unlockedLevel / 100);
 
         return response()->json([
-            'streak' => UserStreak::where('user_id', $user->id)->first(),
+            'streak' => \App\Models\UserStreak::where('user_id', $user->id)->first(),
             'overall_percentage' => 0,
-            'completed_topics' => $hasTakenPlacement ? 1 : 0,
-            'user_progress_index' => $userProgressIndex,
+            'completed_topics' => $hasTakenPlacement ? $userProgressIndex - 1 : 0,
 
-            // --- DATA BARU UNTUK GAYA DUOLINGO FLUTTER ---
-            'has_taken_placement' => $hasTakenPlacement, // Untuk menyembunyikan tombol placement test
-            'unlocked_level' => $unlockedLevel,         // Angka gembok level maksimal yang terbuka (1-50)
+            // --- VARIABEL KUNCI UNTUK KINERJA REAKTIF FLUTTER ---
+            'user_progress_index' => $userProgressIndex, // Menentukan gembok folder Bab Besar (1 - 9)
+            'unlocked_level' => (int)$unlockedLevel,     // Menentukan level maksimal di dalam Sub-Screen
+            'has_taken_placement' => $hasTakenPlacement,
 
             'sessions' => $sessions,
         ]);

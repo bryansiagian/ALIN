@@ -170,22 +170,27 @@ class PlacementController extends Controller
         // 3. Kalkulasi nilai murni (Skor 0 - 100)
         $score = $totalQuestions > 0 ? ($correctCount / $totalQuestions) * 100 : 0;
 
-        // 4. Penentuan Level Terbuka berdasarkan rekomendasi matriks adaptif
+        // --- PEMBARUAN STRATEGIS: SKEMA BASE-100 SESUAI REVISI ---
         if ($score >= 91) {
-            $unlockedLevel = 50;
-        } elseif ($score >= 76) {
-            $unlockedLevel = 35;
+            $unlockedLevel = 301; // Awal Bab 4
+        } elseif ($score >= 81) {
+            $unlockedLevel = 250; // Pertengahan Bab 3
+        } elseif ($score >= 71) {
+            $unlockedLevel = 201; // Awal Bab 3
         } elseif ($score >= 61) {
-            $unlockedLevel = 20;
+            $unlockedLevel = 150; // Pertengahan Bab 2
+        } elseif ($score >= 51) {
+            $unlockedLevel = 101; // Awal Bab 2
         } elseif ($score >= 41) {
-            $unlockedLevel = 10;
+            $unlockedLevel = 50;  // Pertengahan Bab 1
         } else {
-            $unlockedLevel = 1;
+            $unlockedLevel = 1;   // Awal Bab 1
         }
+        // ---------------------------------------------------------
 
-        // 5. Kunci hasil ke dalam database menggunakan Query Builder agar aman dari kendala Model Missing
+        // 5. Kunci hasil ke dalam database
         DB::table('placement_results')->insert([
-            'user_id' => $request->user()->id, // Mengambil ID siswa yang sedang login via Sanctum
+            'user_id' => $request->user()->id,
             'score' => $score,
             'unlocked_level' => $unlockedLevel,
             'created_at' => now(),

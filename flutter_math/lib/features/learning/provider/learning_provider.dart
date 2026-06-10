@@ -16,7 +16,10 @@ final topicsProvider = FutureProvider<List<TopicModel>>((ref) async {
 });
 
 // Provider untuk daftar Materi berdasarkan Topic ID
-final materialsProvider = FutureProvider.family<List<MaterialModel>, int>((ref, topicId) async {
+final materialsProvider = FutureProvider.family<List<MaterialModel>, int>((
+  ref,
+  topicId,
+) async {
   return ref.watch(learningServiceProvider).getMaterials(topicId);
 });
 
@@ -25,17 +28,29 @@ final formulasProvider = FutureProvider<List<FormulaModel>>((ref) async {
   return ref.watch(learningServiceProvider).getFormulas();
 });
 
-// Pipa 3: Mengambil angka progress level mahasiswa langsung dari sensor Laravel
-final progressIndexProvider = FutureProvider<int>((ref) async {
+// =========================================================================
+// PUSAT KENDALI UTAMA: Hanya provider ini yang berhak mengetuk pintu internet
+// =========================================================================
+final analyticsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
-  try {
-    // Mengetuk pintu api/analytics
-    final response = await apiClient.dio.get('analytics');
+  final response = await apiClient.dio.get('analytics');
+  return response.data as Map<String, dynamic>;
+});
 
-    // Ambil nilai dari laci 'user_progress_index', jika kosong berikan angka 1
-    return response.data['user_progress_index'] ?? 1;
-  } catch (e) {
-    // Jika koneksi putus atau error, kembalikan level 1 demi keamanan sistem
-    return 1;
-  }
+// PROVIDER TURUNAN 1: Mengambil angka bab aktif (Mengikuti Pusat Kendali)
+final progressIndexProvider = Provider<int>((ref) {
+  final analyticsAsync = ref.watch(analyticsProvider);
+  return analyticsAsync.maybeWhen(
+    data: (data) => data['user_progress_index'] ?? 1,
+    orElse: () => 1, // Nilai fallback aman jika sedang loading/error
+  );
+});
+
+// PROVIDER TURUNAN 2: Mengambil angka level absolut (Mengikuti Pusat Kendali)
+final unlockedLevelProvider = Provider<int>((ref) {
+  final analyticsAsync = ref.watch(analyticsProvider);
+  return analyticsAsync.maybeWhen(
+    data: (data) => data['unlocked_level'] ?? 1,
+    orElse: () => 1, // Nilai fallback aman jika sedang loading/error
+  );
 });

@@ -23,8 +23,9 @@ class LevelController extends Controller
             return response()->json(['message' => 'Level ini masih terkunci untuk Anda!'], 403);
         }
 
-        // 2. Algoritma Pemetaan Level ke Urutan Topik (1 Topik = 111 Level)
-        $topicOrderIndex = ceil($level / 111);
+        // --- PERUBAHAN DI SINI: UBAH PEMBAGI MENJADI 100 ---
+        $topicOrderIndex = ceil($level / 100);
+        // ---------------------------------------------------
 
         // 3. Cari ID asli Topik di database berdasarkan urutannya (order_index)
         $topic = DB::table('topics')
@@ -39,7 +40,6 @@ class LevelController extends Controller
         }
 
         // 4. Ambil 5 soal secara acak dari bank soal sesuai dengan ID Topik tersebut
-        // Gaya Duolingo: Setiap level menyajikan sedikit soal (misal 5 soal) agar cepat selesai
         $questions = DB::table('question_banks')
             ->where('topic_id', $topic->id)
             ->inRandomOrder()

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/learning/repository/level_repository.dart';
+import 'package:flutter_math/features/learning/provider/learning_provider.dart';
 
 class LevelPlayScreen extends ConsumerStatefulWidget {
   final int level;
@@ -130,6 +131,12 @@ class _LevelPlayScreenState extends ConsumerState<LevelPlayScreen> {
                 ),
               ),
               onPressed: () {
+                // --- TONGKAT COMPASS REAKTIF BARU ---
+                ref.invalidate(
+                  analyticsProvider,
+                ); // Hancurkan memori induk, otomatis anak-anaknya ikut ter-update live!
+                // ------------------------------------
+
                 Navigator.pop(context); // Tutup dialog
                 Navigator.pop(context); // Kembali ke peta level utama
               },
