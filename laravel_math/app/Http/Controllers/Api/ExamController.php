@@ -11,30 +11,41 @@ use Illuminate\Support\Facades\DB;
 
 class ExamController extends Controller
 {
-    /**
-     * Mengambil daftar tugas yang sudah dipublikasikan,
-     * beserta jumlah sesi yang sudah dikerjakan mahasiswa ini.
-     */
     public function getAssignments(Request $request)
     {
         $user = $request->user();
 
-        return Assignment::with('topic')
+        $assignments = Assignment::with('topic')
             ->withCount(['examSessions' => function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             }])
             ->where('status', 'published')
             ->get();
+
+        // AUDIT KEAMANAN: Jangan pernah bocorkan string password ke client!
+        // Kita petakan menjadi variabel boolean 'has_password'
+        return response()->json($assignments->map(function ($assignment) {
+            $assignment->has_password = !empty($assignment->password);
+            unset($assignment->password); // Hapus data string aslinya demi privasi
+            return $assignment;
+        }));
     }
 
-    /**
-     * Memulai sesi ujian baru, atau mengembalikan sesi ongoing jika ada.
-     */
     public function startExam(Request $request, $assignmentId)
     {
         try {
             $user       = $request->user();
             $assignment = Assignment::with('questions')->findOrFail($assignmentId);
+
+            // --- GERBANG 1: VALIDASI PASSWORD KUIS (NEW FEATURE) ---
+            if (!empty($assignment->password)) {
+                if (!$request->has('password') || $request->password !== $assignment->password) {
+                    return response()->json([
+                        'message' => 'Akses ditolak: Password kuis wajib diisi atau tidak cocok!'
+                    ], 401); // Kirim status 401 Unauthorized
+                }
+            }
+            // -------------------------------------------------------
 
             $sekarang = now();
 
@@ -50,27 +61,15 @@ class ExamController extends Controller
                 ], 403);
             }
 
-            // --- LOGIKA PEMBELAJARAN ADAPTIF (ADAPTIVE LEARNING) ---
-            // 1. Intip rapor ujian penempatan milik mahasiswa ini
+            // --- LOGIKA PEMBELAJARAN ADAPTIF ---
             $placement = \App\Models\PlacementResult::where('user_id', $user->id)->first();
-
-            // 2. Tentukan jalur kesulitannya menggunakan fungsi yang tadi kita buat
-            // Jika dia belum ikut placement (atau ini kuis biasa tanpa syarat), paksa ke jalur 'easy'
-            $tier = $placement
-                ? \App\Http\Controllers\Api\PlacementController::getAdaptiveDifficulty($placement->grade)
-                : 'easy';
-
-            // 3. Filter soal di dalam Koper ini agar HANYA mengeluarkan soal sesuai levelnya
+            $tier = $placement ? \App\Http\Controllers\Api\PlacementController::getAdaptiveDifficulty($placement->grade) : 'easy';
             $adaptiveQuestions = $assignment->questions()->where('difficulty', $tier)->inRandomOrder()->get();
 
-            // 4. PERTAHANAN SISTEM: Jika Dosen lupa memasukkan soal dengan tingkat kesulitan tersebut,
-            // keluarkan saja semua soal yang ada agar layar Flutter tidak nge-blank (crash).
             if ($adaptiveQuestions->isEmpty()) {
                 $adaptiveQuestions = $assignment->questions;
             }
-            // --------------------------------------------------------
 
-            // Cek apakah ada sesi ongoing yang belum disubmit
             $activeSession = ExamSession::where('assignment_id', $assignmentId)
                 ->where('user_id', $user->id)
                 ->where('status', 'ongoing')
@@ -78,32 +77,26 @@ class ExamController extends Controller
 
             if ($activeSession) {
                 if ($activeSession->is_locked) {
-                    return response()->json([
-                        'message' => 'Sesi ujian Anda telah dikunci karena pelanggaran.'
-                    ], 403);
+                    return response()->json(['message' => 'Sesi ujian Anda telah dikunci karena pelanggaran.'], 403);
                 }
-
                 return response()->json([
                     'session'    => $activeSession,
                     'assignment' => $assignment,
-                    'questions'  => $adaptiveQuestions, // Gunakan soal yang sudah disaring!
+                    'questions'  => $adaptiveQuestions,
                 ]);
             }
 
-            // Hitung percobaan yang sudah selesai
             $completedCount = ExamSession::where('assignment_id', $assignmentId)
                 ->where('user_id', $user->id)
                 ->where('status', 'submitted')
                 ->count();
 
-            // Cek jatah percobaan
             if ($completedCount >= $assignment->attempt_limit) {
                 return response()->json([
                     'message' => "Jatah percobaan Anda sudah habis ({$completedCount}/{$assignment->attempt_limit})."
                 ], 403);
             }
 
-            // Buat sesi baru
             $session = ExamSession::create([
                 'assignment_id'   => $assignmentId,
                 'user_id'         => $user->id,
@@ -117,17 +110,13 @@ class ExamController extends Controller
             return response()->json([
                 'session'    => $session,
                 'assignment' => $assignment,
-                'questions'  => $adaptiveQuestions, // Gunakan soal yang sudah disaring!
+                'questions'  => $adaptiveQuestions,
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Melaporkan pelanggaran (screenshot / pindah app).
-     * Langsung submit skor 0 saat pelanggaran pertama.
-     */
     public function reportViolation(Request $request, $sessionId)
     {
         $session = ExamSession::findOrFail($sessionId);

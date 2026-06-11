@@ -176,12 +176,14 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
   Widget _buildSliverAppBar(BuildContext context, List materials) {
     final int totalMaterials = materials.length;
     final int pdfCount = materials.where((m) => m.fileUrl != null).length;
-    final int formulaCount =
-        materials.where((m) => m.contentType == 'formula').length;
+    final int formulaCount = materials
+        .where((m) => m.contentType == 'formula')
+        .length;
     final int textCount = totalMaterials - pdfCount - formulaCount;
 
     return SliverAppBar(
-      expandedHeight: 180,
+      expandedHeight:
+          200, // 1. Tingkatkan dari 180 ke 200 agar lebih lega untuk judul panjang
       pinned: true,
       stretch: true,
       backgroundColor: _primaryDark,
@@ -197,8 +199,11 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ),
       ),
@@ -212,80 +217,99 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
               end: Alignment.bottomRight,
             ),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Breadcrumb
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.menu_book_rounded,
-                                color: Colors.white70, size: 12),
-                            SizedBox(width: 4),
-                            Text(
-                              "Materi",
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 11),
-                            ),
-                          ],
-                        ),
+          // 2. CABUT WIDGET 'SafeArea' dan atur padding atas secara rasional (60)
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 60, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Breadcrumb
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.topicTitle,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-                  // Stats pills
-                  if (totalMaterials > 0)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _statPill(Icons.layers_rounded,
-                              "$totalMaterials Materi", Colors.white),
-                          if (pdfCount > 0) ...[
-                            const SizedBox(width: 8),
-                            _statPill(Icons.picture_as_pdf_rounded,
-                                "$pdfCount PDF", const Color(0xFFFFB3B3)),
-                          ],
-                          if (formulaCount > 0) ...[
-                            const SizedBox(width: 8),
-                            _statPill(Icons.functions_rounded,
-                                "$formulaCount Formula", const Color(0xFFB3F0D8)),
-                          ],
-                          if (textCount > 0) ...[
-                            const SizedBox(width: 8),
-                            _statPill(Icons.text_snippet_rounded,
-                                "$textCount Teks", const Color(0xFFBFD7FF)),
-                          ],
+                          Icon(
+                            Icons.menu_book_rounded,
+                            color: Colors.white70,
+                            size: 12,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            "Materi",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.topicTitle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  // Menghilangkan LaTeX dari regular prose
+                ),
+                const SizedBox(height: 12),
+                // Stats pills
+                if (totalMaterials > 0)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _statPill(
+                          Icons.layers_rounded,
+                          "$totalMaterials Materi",
+                          Colors.white,
+                        ),
+                        if (pdfCount > 0) ...[
+                          const SizedBox(width: 8),
+                          _statPill(
+                            Icons.picture_as_pdf_rounded,
+                            "$pdfCount PDF",
+                            const Color(0xFFFFB3B3),
+                          ),
+                        ],
+                        if (formulaCount > 0) ...[
+                          const SizedBox(width: 8),
+                          _statPill(
+                            Icons.functions_rounded,
+                            "$formulaCount Formula",
+                            const Color(0xFFB3F0D8),
+                          ),
+                        ],
+                        if (textCount > 0) ...[
+                          const SizedBox(width: 8),
+                          _statPill(
+                            Icons.text_snippet_rounded,
+                            "$textCount Teks",
+                            const Color(0xFFBFD7FF),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -502,14 +526,25 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline_rounded,
-                  color: _pdfRed.withOpacity(0.7), size: 14),
-              const SizedBox(width: 8),
-              const Text(
-                "Dokumen PDF tersedia untuk dibaca atau diunduh",
-                style: TextStyle(
-                    color: _textSecondary, fontSize: 12, height: 1.4),
+              Icon(
+                Icons.info_outline_rounded,
+                color: _pdfRed.withOpacity(0.7),
+                size: 14,
               ),
+              const SizedBox(width: 8),
+
+              // --- SUNTIKKAN EXPANDED DI SINI AGAR TEKS OTOMATIS ME-WRAP ---
+              Expanded(
+                child: const Text(
+                  "Dokumen PDF tersedia untuk dibaca atau diunduh",
+                  style: TextStyle(
+                    color: _textSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              // -------------------------------------------------------------
             ],
           ),
         ),

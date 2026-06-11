@@ -96,6 +96,7 @@ class LecturerController extends Controller
     }
     */
 
+    /*
     public function store(Request $request)
     {
         try {
@@ -134,6 +135,75 @@ class LecturerController extends Controller
 
                 // Langsung masukkan daftar soal ke dalam koper tugas
                 $assignment->questions()->attach($validated['questions']);
+
+                return response()->json([
+                    'message' => 'Kuis berhasil diterbitkan!',
+                    'assignment_id' => $assignment->id
+                ], 201);
+            });
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    */
+
+    public function store(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'topic_id' => 'required|exists:topics,id',
+                'title' => 'required|string',
+                'start_time' => 'required|date',
+                'deadline' => 'required|date|after:start_time',
+                'duration_minutes' => 'required|integer',
+                'is_safe_exam' => 'required|boolean',
+                'allow_reattempt' => 'required|boolean',
+                'attempt_limit' => 'required|integer|min:1',
+                'show_results' => 'required|boolean',
+                'password' => 'nullable|string|max:255',
+
+                // SINKRONISASI MUTLAK: Terima objek soal utuh dari Flutter
+                'questions' => 'required|array|min:1',
+                'questions.*.question_text' => 'required|string',
+                'questions.*.options' => 'required|array',
+                'questions.*.correct_answer' => 'required|string',
+            ]);
+
+            return DB::transaction(function () use ($request, $validated) {
+                // 1. Amankan data induk kuis ke tabel assignments
+                $assignment = Assignment::create([
+                    'lecturer_id' => $request->user()->id,
+                    'topic_id' => $validated['topic_id'],
+                    'title' => $validated['title'],
+                    'description' => $request->description ?? '-',
+                    'start_time' => $validated['start_time'],
+                    'deadline' => $validated['deadline'],
+                    'duration_minutes' => $validated['duration_minutes'],
+                    'question_count' => count($validated['questions']),
+                    'is_safe_exam' => $validated['is_safe_exam'],
+                    'allow_reattempt' => $validated['allow_reattempt'],
+                    'attempt_limit' => $validated['attempt_limit'],
+                    'show_results' => $validated['show_results'],
+                    'status' => 'published',
+                    'password' => $validated['password'] ?? null,
+                ]);
+
+                // 2. Pecah dan simpan satu per satu objek soal ke dalam laci Bank Soal
+                $questionIds = [];
+                foreach ($validated['questions'] as $qData) {
+                    $question = QuestionBank::create([
+                        'topic_id' => $validated['topic_id'],
+                        'question_text' => $qData['question_text'],
+                        'question_type' => 'multiple_choice',
+                        'difficulty' => 'medium',
+                        'options' => $qData['options'], // Pastikan cast array aktif di Model QuestionBank
+                        'correct_answer' => $qData['correct_answer'],
+                    ]);
+                    $questionIds[] = $question->id;
+                }
+
+                // 3. Hubungkan jembatan relasi soal dengan koper tugas kuis
+                $assignment->questions()->attach($questionIds);
 
                 return response()->json([
                     'message' => 'Kuis berhasil diterbitkan!',

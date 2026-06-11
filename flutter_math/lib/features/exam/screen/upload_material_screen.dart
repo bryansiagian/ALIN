@@ -50,11 +50,16 @@ class _UploadMaterialScreenState extends ConsumerState<UploadMaterialScreen> {
     try {
       final service = LecturerService(ref.read(apiClientProvider).dio);
       final data = await service.getTopicsList();
+
       setState(() {
-        _topics = data;
+        // --- PROSE STERILISASI DROPDOWN (ANTI-SALAH-UPLOAD) ---
+        // Saring list data dari server, pastikan topik dengan id 6 (Placement Test) dibuang
+        _topics = data.where((topic) => topic['id'] != 6).toList();
+        // -------------------------------------------------------
+
         _isLoadingTopics = false;
       });
-      } catch (e) {
+    } catch (e) {
       setState(() => _isLoadingTopics = false);
     }
   }
@@ -168,6 +173,7 @@ class _UploadMaterialScreenState extends ConsumerState<UploadMaterialScreen> {
                         const SizedBox(height: 16),
 
                         // Step 2: Topik
+                        /*
                         _StepCard(
                           step: 2,
                           title: "Pilih Topik",
@@ -184,6 +190,19 @@ class _UploadMaterialScreenState extends ConsumerState<UploadMaterialScreen> {
                                   topics: _topics,
                                   selectedId: _selectedTopicId,
                                   onChanged: (v) => setState(() => _selectedTopicId = v),
+                                ),
+                        ),
+                        */
+                        _StepCard(
+                          step: 2,
+                          title: "Pilih Topik",
+                          child: _isLoadingTopics
+                              ? const _TopicLoadingIndicator()
+                              : _TopicDropdown(
+                                  topics: _topics,
+                                  selectedId: _selectedTopicId,
+                                  onChanged: (v) =>
+                                      setState(() => _selectedTopicId = v),
                                 ),
                         ),
                         const SizedBox(height: 16),

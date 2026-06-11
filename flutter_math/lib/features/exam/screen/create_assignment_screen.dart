@@ -15,12 +15,27 @@ class CreateAssignmentScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
-    with TickerProviderStateMixin {
-  // ── Controllers ──────────────────────────────────────────────────────────
+  with TickerProviderStateMixin {
+ // ── Controllers ──────────────────────────────────────────────────────────
   final _titleController = TextEditingController();
-  final _deadlineController = TextEditingController(
-    text: DateTime.now().add(const Duration(days: 1)).toString(),
+  // --- SUNTIKKAN KONTROLER WAKTU MULAI DI SINI ---
+  final _startTimeController = TextEditingController(
+    text: DateTime.now()
+        .toString()
+        .split('.')
+        .first, // Set default waktu sekarang
   );
+  // -----------------------------------------------
+  final _deadlineController = TextEditingController(
+    text: DateTime.now()
+        .add(const Duration(days: 1))
+        .toString()
+        .split('.')
+        .first,
+  );
+  // --- SUNTIKKAN KONTROLER PASSWORD DI SINI ---
+  final _passwordController = TextEditingController();
+  // --------------------------------------------
   final _scrollController = ScrollController();
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -29,6 +44,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
   int _attemptLimit = 1;
   bool _showResults = true;
   bool _isSubmitting = false;
+  bool _obscurePassword = true;
 
   // Step tracker
   int _currentStep = 0; // 0 = Info, 1 = Soal
@@ -78,7 +94,9 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
   @override
   void dispose() {
     _titleController.dispose();
+    _startTimeController.dispose();
     _deadlineController.dispose();
+    _passwordController.dispose();
     _scrollController.dispose();
     _fadeController.dispose();
     for (final q in _questions) {
@@ -162,6 +180,10 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
       await service.createAssignment({
         'topic_id': 1,
         'title': _titleController.text,
+        'start_time': _startTimeController.text,
+        'password': _passwordController.text.trim().isEmpty
+            ? null
+            : _passwordController.text.trim(),
         'deadline': _deadlineController.text,
         'duration_minutes': 60,
         'is_safe_exam': _isSafeExam,
@@ -535,6 +557,70 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                     ),
                   ),
                 ],
+
+                _divider(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    style: const TextStyle(fontSize: 14, color: _textPrimary),
+                    decoration: InputDecoration(
+                      labelText: "Password Kuis (Opsional)",
+                      hintText: "Kosongkan jika tanpa password",
+                      labelStyle: const TextStyle(
+                        color: _textSecondary,
+                        fontSize: 13,
+                      ),
+                      hintStyle: const TextStyle(
+                        color: _textSecondary,
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.vpn_key_rounded,
+                        color: _primaryLight,
+                        size: 18,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: _textSecondary,
+                          size: 18,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFF),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: _primaryLight.withOpacity(0.2),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: _primaryLight.withOpacity(0.2),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: _primaryMid,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

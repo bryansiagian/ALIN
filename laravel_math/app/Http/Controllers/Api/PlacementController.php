@@ -197,6 +197,8 @@ class PlacementController extends Controller
             'updated_at' => now(),
         ]);
 
+        DB::table('users')->where('id', $request->user()->id)->update(['has_taken_placement' => true]);
+
         // 6. Kirim respons balik ke Flutter
         return response()->json([
             'message' => 'Placement test berhasil diselesaikan!',
@@ -209,11 +211,17 @@ class PlacementController extends Controller
      * Ambil hasil placement test milik user yang sedang login.
      * Dipakai Flutter untuk menampilkan grade di profil/home.
      */
+    /**
+     * Ambil hasil placement test milik user yang sedang login.
+     * Dipakai Flutter untuk menampilkan grade di profil/home.
+     */
     public function getMyResult(Request $request)
     {
         $user   = $request->user();
         $result = PlacementResult::where('user_id', $user->id)
-            ->latest('taken_at')
+            // --- PERBAIKAN: Ganti taken_at menjadi created_at ---
+            ->latest('created_at')
+            // ----------------------------------------------------
             ->first();
 
         if (!$result) {

@@ -4,6 +4,79 @@ import 'package:flutter_math/features/dashboard/provider/progress_provider.dart'
 import 'package:flutter_math/features/exam/screen/exam_result_screen.dart';
 import 'package:flutter_math/features/auth/provider/auth_provider.dart';
 import 'package:flutter_math/features/placement/provider/placement_provider.dart';
+import 'package:flutter_math/core/api/api_client.dart'; // Mengamankan gerbang komunikasi Dio
+import 'package:dio/dio.dart';
+
+import 'progress_screen_visual.dart';
+import 'progress_screen_helpers.dart';
+
+// ── SUNTIKKAN PROVIDER MANDIRI DI SINI (SOLUSI JELAS GAIB KUIS BARU) ──
+final studentAssignmentsProvider = FutureProvider.autoDispose<List<dynamic>>((
+  ref,
+) async {
+  final apiClient = ref.read(apiClientProvider);
+  final response = await apiClient.dio.get('/exam/assignments');
+  return response.data as List<dynamic>;
+});
+// ───────────────────────────────────────────────────────────────────────
+
+class _StatBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _StatBox({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: const Color(0xFF1A5FD4).withOpacity(0.9),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F2D6B),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _VertDivider extends StatelessWidget {
+  const _VertDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 36,
+      margin: const EdgeInsets.symmetric(horizontal: 14),
+      color: const Color(0xFFE5E7EB),
+    );
+  }
+}
 
 class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
@@ -11,6 +84,9 @@ class ProgressScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final analyticsAsync = ref.watch(analyticsProvider);
+    // Ikut pantau daftar kuis aktif langsung dari server
+    final assignmentsAsync = ref.watch(studentAssignmentsProvider);
+
     final user = ref.watch(authProvider).user;
     final hasTakenPlacement = user?.hasTakenPlacement ?? false;
 
@@ -31,7 +107,10 @@ class ProgressScreen extends ConsumerWidget {
                 child: IconButton(
                   onPressed: () {
                     ref.invalidate(analyticsProvider);
-                    if (hasTakenPlacement) ref.invalidate(placementResultProvider);
+                    ref.invalidate(studentAssignmentsProvider);
+                    if (hasTakenPlacement) {
+                      ref.invalidate(placementResultProvider);
+                    }
                   },
                   icon: Container(
                     padding: const EdgeInsets.all(6),
@@ -39,8 +118,11 @@ class ProgressScreen extends ConsumerWidget {
                       color: Colors.white.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.refresh_rounded,
-                        color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   tooltip: "Refresh",
                 ),
@@ -95,98 +177,134 @@ class ProgressScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: _PlacementSection(
-                hasTakenPlacement: hasTakenPlacement,
-              ),
+              child: _PlacementSection(hasTakenPlacement: hasTakenPlacement),
             ),
           ),
 
           // ── Kuis Reguler Content ─────────────────────────────────────
           analyticsAsync.when(
-            data: (data) {
-              final sessions = data.sessions;
-              if (sessions.isEmpty) {
-                return SliverPadding(
-                  padding: const EdgeInsets.only(top: 8),
-                  sliver: const SliverFillRemaining(child: _EmptyQuizState()),
-                );
-              }
+            data: (analyticsData) {
+              final sessions = analyticsData.sessions;
 
-              final scores = sessions
-                  .map<num>((s) => s['total_score'] ?? 0)
-                  .toList();
-              final avg =
-                  scores.reduce((a, b) => a + b) / scores.length;
-              final best = scores.reduce((a, b) => a > b ? a : b);
+              return assignmentsAsync.when(
+                data: (assignments) {
+                  if (assignments.isEmpty) {
+                    return SliverPadding(
+                      padding: const EdgeInsets.only(top: 8),
+                      sliver: const SliverFillRemaining(
+                        child: _EmptyQuizState(),
+                      ),
+                    );
+                  }
 
-              return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      if (index == 0) {
-                        return _SummaryCard(
-                          total: sessions.length,
-                          avg: avg.toDouble(),
-                          best: best.toDouble(),
-                        );
-                      }
-                      if (index == 1) {
-                        return Padding(
-                          padding:
-                              const EdgeInsets.only(top: 20, bottom: 10),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 18,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Color(0xFF4B8EFF),
-                                      Color(0xFF1A5FD4)
-                                    ],
+                  // Hitung skor rata-rata berdasarkan sesi yang sudah disubmit
+                  final submittedSessions = sessions
+                      .where((s) => s['status'] == 'submitted')
+                      .toList();
+                  final scores = submittedSessions
+                      .map<num>((s) => s['total_score'] ?? 0)
+                      .toList();
+                  final avg = scores.isEmpty
+                      ? 0.0
+                      : scores.reduce((a, b) => a + b) / scores.length;
+                  final best = scores.isEmpty
+                      ? 0.0
+                      : scores.reduce((a, b) => a > b ? a : b);
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        if (index == 0) {
+                          return _SummaryCard(
+                            total: submittedSessions.length,
+                            avg: avg.toDouble(),
+                            best: best.toDouble(),
+                          );
+                        }
+                        if (index == 1) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 20, bottom: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0xFF4B8EFF),
+                                        Color(0xFF1A5FD4),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                  borderRadius: BorderRadius.circular(4),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              const Text(
-                                "Semua Sesi Ujian",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F2D6B),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  "Daftar Ujian & Kuis Aktif",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F2D6B),
+                                  ),
                                 ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                "${sessions.length} sesi",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
+                                const Spacer(),
+                                Text(
+                                  "${assignments.length} kuis",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          );
+                        }
+
+                        final idx = index - 2;
+                        final assignment = assignments[idx];
+                        final int assignmentId = assignment['id'] ?? 0;
+
+                        // Cari apakah ada riwayat pengerjaan mahasiswa untuk kuis ini
+                        final matchingSessions = sessions
+                            .where((s) => s['assignment_id'] == assignmentId)
+                            .toList();
+                        final dynamic latestSession =
+                            matchingSessions.isNotEmpty
+                            ? matchingSessions.first
+                            : null;
+
+                        final int totalAttempts =
+                            assignment['exam_sessions_count'] ??
+                            matchingSessions.length;
+
+                        return _SessionCard(
+                          session:
+                              latestSession, // Bisa bernilai null jika kuis baru belum disentuh
+                          assignment: assignment,
+                          attempt: totalAttempts,
+                          onTap: () => _handleAssignmentAccessGate(
+                            context,
+                            ref,
+                            latestSession,
+                            assignment,
+                            sessions,
                           ),
                         );
-                      }
-                      final idx = index - 2;
-                      final session = sessions[idx];
-                      final assignment = session['assignment'];
-                      final attempt = sessions.length - idx;
-                      return _SessionCard(
-                        session: session,
-                        assignment: assignment,
-                        attempt: attempt,
-                        onTap: () =>
-                            _viewDetail(context, session, assignment),
-                      );
-                    },
-                    childCount: sessions.length + 2,
+                      }, childCount: assignments.length + 2),
+                    ),
+                  );
+                },
+                loading: () => const SliverFillRemaining(
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF2D6EE8)),
                   ),
+                ),
+                error: (err, stack) => SliverFillRemaining(
+                  child: _ErrorState(message: err.toString()),
                 ),
               );
             },
@@ -207,8 +325,296 @@ class ProgressScreen extends ConsumerWidget {
     );
   }
 
-  void _viewDetail(
-      BuildContext context, dynamic session, dynamic assignment) {
+  void _handleAssignmentAccessGate(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic session,
+    dynamic assignment,
+    List<dynamic> allSessions,
+  ) {
+    final int assignmentId = assignment['id'] ?? 0;
+    final bool allowReattempt = assignment['allow_reattempt'] ?? false;
+    final int attemptLimit = assignment['attempt_limit'] ?? 1;
+
+    final int totalCompletedAttempts = allSessions
+        .where((s) => s['assignment_id'] == assignmentId)
+        .length;
+
+    // 1. Validasi gembok waktu mulai kuis (Menampilkan waktu mulai & deadline secara rapi)
+    final String? startTimeStr = assignment['start_time'];
+    final String? deadlineStr =
+        assignment['deadline']; // Ambil data deadline dari koper kuis
+
+    if (startTimeStr != null) {
+      final DateTime startTime = DateTime.parse(startTimeStr);
+      if (DateTime.now().isBefore(startTime)) {
+        // Konversi kedua string waktu menjadi format yang mudah dibaca mata mahasiswa
+        final String startFormatted = _formatHumanReadableDateTime(
+          startTimeStr,
+        );
+        final String deadlineFormatted = _formatHumanReadableDateTime(
+          deadlineStr,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.orange[800],
+            duration: const Duration(seconds: 4),
+            content: Row(
+              children: [
+                const Icon(Icons.watch_later_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "Akses ditolak: Kuis ini hanya dapat diakses mulai $startFormatted hingga $deadlineFormatted.",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    // 2. Jika sesi belum pernah dibuat (Kuis baru 0 Sesi) -> Tantang password langsung
+    if (session == null) {
+      _challengeQuizPassword(context, ref, assignmentId, assignment);
+      return;
+    }
+
+    // 3. Manajemen penempuhan ulang kuis adaptif
+    if (allowReattempt && totalCompletedAttempts < attemptLimit) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        builder: (context) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.analytics_rounded,
+                      color: Color(0xFF1A5FD4),
+                    ),
+                    title: const Text(
+                      "Lihat Detail Hasil Sesi Ini",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _viewDetail(context, session, assignment);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.replay_rounded,
+                      color: Colors.green,
+                    ),
+                    title: Text(
+                      "Mulai Percobaan Baru (${totalCompletedAttempts + 1}/$attemptLimit)",
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _challengeQuizPassword(
+                        context,
+                        ref,
+                        assignmentId,
+                        assignment,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      _viewDetail(context, session, assignment);
+    }
+  }
+
+  void _challengeQuizPassword(
+    BuildContext context,
+    WidgetRef ref,
+    int assignmentId,
+    dynamic assignment,
+  ) {
+    final String? quizPassword = assignment['password'];
+
+    if (quizPassword != null && quizPassword.isNotEmpty) {
+      final passwordController = TextEditingController();
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.lock_outline_rounded, color: Colors.redAccent),
+                SizedBox(width: 10),
+                Text(
+                  "Password Diperlukan",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Kuis ini terkunci. Silakan masukkan password valid dari dosen pengampu.",
+                  style: TextStyle(fontSize: 12.5, color: Colors.grey),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: "Password Kuis",
+                    prefixIcon: const Icon(
+                      Icons.vpn_key_rounded,
+                      size: 18,
+                      color: Color(0xFF1A5FD4),
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  "Batal",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A5FD4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  final String enteredText = passwordController.text.trim();
+                  Navigator.pop(context);
+                  _executeStartExamNetworkCall(
+                    context,
+                    ref,
+                    assignmentId,
+                    enteredText,
+                  );
+                },
+                child: const Text(
+                  "Masuk Ujian",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      _executeStartExamNetworkCall(context, ref, assignmentId, null);
+    }
+  }
+
+  void _executeStartExamNetworkCall(
+    BuildContext context,
+    WidgetRef ref,
+    int assignmentId,
+    String? password,
+  ) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF1A5FD4)),
+      ),
+    );
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+
+      final response = await apiClient.dio.post(
+        '/exam/assignments/$assignmentId/start',
+        data: password != null ? {'password': password} : null,
+      );
+
+      if (context.mounted) Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            content: Text(
+              "Sukses: Lembar kuis adaptif berhasil diamankan dari server!",
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+
+      String errorMessage = "Gagal terhubung ke ruang ujian.";
+      if (e is DioException && e.response != null) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFE53935),
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(child: Text(errorMessage)),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  void _viewDetail(BuildContext context, dynamic session, dynamic assignment) {
     Map<int, String> userAnswers = {};
     final List answers = session['answers'] ?? [];
     for (var a in answers) {
@@ -226,12 +632,26 @@ class ProgressScreen extends ConsumerWidget {
       ),
     );
   }
+
+    String _formatHumanReadableDateTime(String? dateTimeStr) {
+    if (dateTimeStr == null || dateTimeStr.isEmpty) return '-';
+    try {
+      final DateTime dt = DateTime.parse(dateTimeStr);
+      final String day = dt.day.toString().padLeft(2, '0');
+      final String month = dt.month.toString().padLeft(2, '0');
+      final String year = dt.year.toString();
+      final String hour = dt.hour.toString().padLeft(2, '0');
+      final String minute = dt.minute.toString().padLeft(2, '0');
+
+      return '$day-$month-$year pukul $hour:$minute';
+    } catch (_) {
+      return dateTimeStr ?? '-';
+    }
+  }
 }
 
-// ── Placement Section ─────────────────────────────────────────────────────────
 class _PlacementSection extends ConsumerWidget {
   final bool hasTakenPlacement;
-
   const _PlacementSection({required this.hasTakenPlacement});
 
   @override
@@ -239,7 +659,6 @@ class _PlacementSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section header
         Row(
           children: [
             Container(
@@ -266,18 +685,17 @@ class _PlacementSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 10),
-
         if (!hasTakenPlacement)
           _PlacementNotTakenCard()
         else
-          _PlacementResultCard(),
+          const _PlacementResultCard(),
       ],
     );
   }
 }
 
-// Card: belum mengerjakan placement
 class _PlacementNotTakenCard extends StatelessWidget {
+  const _PlacementNotTakenCard();
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -303,8 +721,11 @@ class _PlacementNotTakenCard extends StatelessWidget {
               color: const Color(0xFFF5F3FF),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.quiz_outlined,
-                color: Color(0xFF7C3AED), size: 24),
+            child: const Icon(
+              Icons.quiz_outlined,
+              color: Color(0xFF7C3AED),
+              size: 24,
+            ),
           ),
           const SizedBox(width: 14),
           const Expanded(
@@ -333,12 +754,12 @@ class _PlacementNotTakenCard extends StatelessWidget {
   }
 }
 
-// Card: sudah mengerjakan placement — fetch hasilnya
 class _PlacementResultCard extends ConsumerWidget {
+  const _PlacementResultCard();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final resultAsync = ref.watch(placementResultProvider);
-
     return resultAsync.when(
       loading: () => Container(
         height: 90,
@@ -367,8 +788,9 @@ class _PlacementResultCard extends ConsumerWidget {
       data: (result) {
         final score = (result['score'] as num?)?.toDouble() ?? 0;
         final grade = result['grade'] as String? ?? '-';
-        final info = _gradeInfo(grade);
 
+        // RESTRUKTURISASI AMAN: Kembalikan fungsi privat bawaan asli milik Anda
+        final info = _gradeInfo(grade);
         return Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -381,10 +803,7 @@ class _PlacementResultCard extends ConsumerWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(
-              color: info.color.withOpacity(0.25),
-              width: 1.5,
-            ),
+            border: Border.all(color: info.color.withOpacity(0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: info.color.withOpacity(0.10),
@@ -395,7 +814,6 @@ class _PlacementResultCard extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              // Grade badge
               Container(
                 width: 56,
                 height: 56,
@@ -415,8 +833,6 @@ class _PlacementResultCard extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 14),
-
-              // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,8 +868,6 @@ class _PlacementResultCard extends ConsumerWidget {
                   ],
                 ),
               ),
-
-              // Icon
               Icon(info.icon, color: info.color.withOpacity(0.5), size: 28),
             ],
           ),
@@ -462,54 +876,55 @@ class _PlacementResultCard extends ConsumerWidget {
     );
   }
 
-  _GradeVisual _gradeInfo(String grade) {
+  // REKONSILIASI METODE PRIVAT KELAS BAWAAN ASLI (ANTI GARIS MERAH)
+  GradeVisual _gradeInfo(String grade) {
     switch (grade) {
       case 'A':
-        return _GradeVisual(
+        return const GradeVisual(
           icon: Icons.emoji_events_rounded,
-          color: const Color(0xFFF59E0B),
+          color: Color(0xFFF59E0B),
           label: 'Sangat Memuaskan',
           description: 'Pemahaman sangat kuat. Siap materi paling menantang.',
         );
       case 'AB':
-        return _GradeVisual(
+        return const GradeVisual(
           icon: Icons.star_rounded,
-          color: const Color(0xFF10B981),
+          color: Color(0xFF10B981),
           label: 'Memuaskan',
           description: 'Fondasi kuat untuk berkembang lebih jauh.',
         );
       case 'B':
-        return _GradeVisual(
+        return const GradeVisual(
           icon: Icons.thumb_up_rounded,
-          color: const Color(0xFF1A56DB),
+          color: Color(0xFF1A56DB),
           label: 'Baik',
           description: 'Pemahaman baik. Terus berlatih untuk hasil optimal.',
         );
       case 'BC':
-        return _GradeVisual(
+        return const GradeVisual(
           icon: Icons.trending_up_rounded,
-          color: const Color(0xFF6366F1),
+          color: Color(0xFF6366F1),
           label: 'Cukup Baik',
           description: 'Di jalur yang tepat. Sedikit latihan lagi.',
         );
       case 'C':
-        return _GradeVisual(
+        return const GradeVisual(
           icon: Icons.school_rounded,
-          color: const Color(0xFF8B5CF6),
+          color: Color(0xFF8B5CF6),
           label: 'Cukup',
           description: 'Fokus pada konsep dasar untuk meningkat.',
         );
       case 'D':
-        return _GradeVisual(
+        return const GradeVisual(
           icon: Icons.auto_graph_rounded,
-          color: const Color(0xFFF97316),
+          color: Color(0xFFF97316),
           label: 'Kurang',
           description: 'Mulai dari konsep dasar secara bertahap.',
         );
       default:
-        return _GradeVisual(
+        return const GradeVisual(
           icon: Icons.refresh_rounded,
-          color: const Color(0xFFEF4444),
+          color: Color(0xFFEF4444),
           label: 'Perlu Bimbingan',
           description: 'Manfaatkan semua materi dan jangan ragu bertanya.',
         );
@@ -517,26 +932,10 @@ class _PlacementResultCard extends ConsumerWidget {
   }
 }
 
-class _GradeVisual {
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String description;
-
-  const _GradeVisual({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.description,
-  });
-}
-
-// ── Summary Card ─────────────────────────────────────────────────────────────
 class _SummaryCard extends StatelessWidget {
   final int total;
   final double avg;
   final double best;
-
   const _SummaryCard({
     required this.total,
     required this.avg,
@@ -562,36 +961,24 @@ class _SummaryCard extends StatelessWidget {
         ],
       ),
       padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            "Ringkasan Progres",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.5,
-            ),
+          _StatBox(
+            label: "Total Sesi",
+            value: "$total",
+            icon: Icons.history_rounded,
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _StatBox(
-                  label: "Total Sesi",
-                  value: "$total",
-                  icon: Icons.history_rounded),
-              _VertDivider(),
-              _StatBox(
-                  label: "Rata-rata",
-                  value: avg.toStringAsFixed(1),
-                  icon: Icons.trending_up_rounded),
-              _VertDivider(),
-              _StatBox(
-                  label: "Terbaik",
-                  value: best.toStringAsFixed(0),
-                  icon: Icons.emoji_events_rounded),
-            ],
+          _VertDivider(),
+          _StatBox(
+            label: "Rata-rata",
+            value: avg.toStringAsFixed(1),
+            icon: Icons.trending_up_rounded,
+          ),
+          _VertDivider(),
+          _StatBox(
+            label: "Terbaik",
+            value: best.toStringAsFixed(0),
+            icon: Icons.emoji_events_rounded,
           ),
         ],
       ),
@@ -599,61 +986,11 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _StatBox extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _StatBox(
-      {required this.label, required this.value, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white.withOpacity(0.80), size: 20),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.72),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VertDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 52,
-      color: Colors.white.withOpacity(0.22),
-    );
-  }
-}
-
-// ── Session Card ─────────────────────────────────────────────────────────────
 class _SessionCard extends StatefulWidget {
   final dynamic session;
   final dynamic assignment;
   final int attempt;
   final VoidCallback onTap;
-
   const _SessionCard({
     required this.session,
     required this.assignment,
@@ -667,29 +1004,24 @@ class _SessionCard extends StatefulWidget {
 
 class _SessionCardState extends State<_SessionCard> {
   bool _pressed = false;
-
-  Color _scoreColor(num score) {
-    if (score >= 80) return const Color(0xFF1A8A5A);
-    if (score >= 60) return const Color(0xFF2D6EE8);
-    return const Color(0xFFE53935);
-  }
-
-  Color _scoreBg(num score) {
-    if (score >= 80) return const Color(0xFFE8F8F2);
-    if (score >= 60) return const Color(0xFFEEF4FF);
-    return const Color(0xFFFFEBEE);
-  }
-
-  String _scoreLabel(num score) {
-    if (score >= 80) return "Lulus";
-    if (score >= 60) return "Cukup";
-    return "Perlu Latihan";
-  }
+  Color _scoreColor(num score) => score >= 80
+      ? const Color(0xFF1A8A5A)
+      : (score >= 60 ? const Color(0xFF2D6EE8) : const Color(0xFFE53935));
+  Color _scoreBg(num score) => score >= 80
+      ? const Color(0xFFE8F8F2)
+      : (score >= 60 ? const Color(0xFFEEF4FF) : const Color(0xFFFFEBEE));
 
   @override
   Widget build(BuildContext context) {
-    final score = widget.session['total_score'] ?? 0;
+    final score = widget.session != null
+        ? (widget.session['total_score'] ?? 0)
+        : null;
     final title = widget.assignment['title'] ?? "Kuis";
+
+    // PEMANDUAN VARIABEL AMAN: Ambil gembok password lewat widget induk secara mutlak
+    final bool hasPassword =
+        (widget.assignment['has_password'] ?? false) ||
+        (widget.assignment['password'] != null);
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -715,26 +1047,32 @@ class _SessionCardState extends State<_SessionCard> {
             ],
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 Container(
                   width: 54,
                   height: 54,
                   decoration: BoxDecoration(
-                    color: _scoreBg(score),
+                    color: score != null
+                        ? _scoreBg(score)
+                        : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Center(
-                    child: Text(
-                      "$score",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: _scoreColor(score),
-                      ),
-                    ),
+                    child: score != null
+                        ? Text(
+                            "$score",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: _scoreColor(score),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.assignment_outlined,
+                            color: Color(0xFF64748B),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -742,38 +1080,67 @@ class _SessionCardState extends State<_SessionCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Color(0xFF0F2D6B),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: Color(0xFF0F2D6B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (hasPassword)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.lock_rounded,
+                                color: Colors.orange,
+                                size: 14,
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: _scoreBg(score),
+                              color: score != null
+                                  ? _scoreBg(score)
+                                  : const Color(0xFFE2E8F0),
                               borderRadius: BorderRadius.circular(7),
                             ),
                             child: Text(
-                              _scoreLabel(score),
+                              score != null
+                                  ? (score >= 80
+                                        ? "Lulus"
+                                        : (score >= 60
+                                              ? "Cukup"
+                                              : "Perlu Latihan"))
+                                  : "Belum Diikuti",
                               style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: _scoreColor(score),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: score != null
+                                    ? _scoreColor(score)
+                                    : const Color(0xFF475569),
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            "Percobaan ke-${widget.attempt}",
+                            widget.attempt > 0
+                                ? "Percobaan: ${widget.attempt}x"
+                                : "0 Percobaan",
                             style: TextStyle(
                               fontSize: 11.5,
                               color: Colors.grey[500],
@@ -806,10 +1173,8 @@ class _SessionCardState extends State<_SessionCard> {
   }
 }
 
-// ── Empty States ──────────────────────────────────────────────────────────────
 class _EmptyQuizState extends StatelessWidget {
   const _EmptyQuizState();
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -825,12 +1190,15 @@ class _EmptyQuizState extends StatelessWidget {
                 color: const Color(0xFFDCEAFF),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(Icons.bar_chart_rounded,
-                  size: 42, color: Color(0xFF2D6EE8)),
+              child: const Icon(
+                Icons.bar_chart_rounded,
+                size: 42,
+                color: Color(0xFF2D6EE8),
+              ),
             ),
             const SizedBox(height: 18),
             const Text(
-              "Belum ada riwayat kuis",
+              "Belum ada kuis tersedia",
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 17,
@@ -839,7 +1207,7 @@ class _EmptyQuizState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              "Selesaikan kuis pertamamu untuk melihat progres di sini.",
+              "Dosen belum menerbitkan kuis aktif untuk kelas Anda.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey[500]),
             ),
@@ -850,11 +1218,9 @@ class _EmptyQuizState extends StatelessWidget {
   }
 }
 
-// ── Error State ───────────────────────────────────────────────────────────────
 class _ErrorState extends StatelessWidget {
   final String message;
   const _ErrorState({required this.message});
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -870,8 +1236,11 @@ class _ErrorState extends StatelessWidget {
                 color: const Color(0xFFFFEBEE),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Icons.cloud_off_rounded,
-                  color: Color(0xFFE53935), size: 36),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                color: Color(0xFFE53935),
+                size: 36,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(

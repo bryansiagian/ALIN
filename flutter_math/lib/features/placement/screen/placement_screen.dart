@@ -83,23 +83,25 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
     setState(() => _isSubmitting = true);
 
     try {
+      // --- MANIPULASI DATA: KONVERSI MAP MENJADI LIST OF OBJECTS ---
+      final List<Map<String, dynamic>> formattedAnswers = _answers.entries.map((
+        entry,
+      ) {
+        return {'question_id': entry.key, 'selected_option': entry.value};
+      }).toList();
+      // -------------------------------------------------------------
+
       final result = await ref
           .read(placementProvider.notifier)
-          .submitPlacement(_answers);
-
-      // refreshUser() dipanggil di PlacementResultScreen, bukan di sini.
-      // refreshUser() akan trigger GoRouter redirect ke /student,
-      // yang konflik dengan Navigator.push ke PlacementResultScreen.
-      // refreshUser() dipanggil di PlacementResultScreen saat user
-      // tap tombol "Mulai Belajar".
+          .submitPlacement(formattedAnswers);
 
       if (mounted) {
         Navigator.push(
           context,
           PageRouteBuilder(
             pageBuilder: (_, animation, __) => PlacementResultScreen(
-              score: (result['score'] as num).toDouble(),
-              grade: result['grade'] as String,
+              score: (result['score'] as num?)?.toDouble() ?? 0.0,
+              grade: result['grade']?.toString() ?? '-',
             ),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(
@@ -113,8 +115,9 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
             transitionDuration: const Duration(milliseconds: 400),
           ),
         );
-      }
+      } // <--- Memperbaiki kurung tutup milik 'if (mounted)'
     } catch (e) {
+      // <--- Memperbaiki struktur penutup blok 'try'
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -181,7 +184,9 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF1A56DB).withOpacity(0.08),
+                                  color: const Color(
+                                    0xFF1A56DB,
+                                  ).withOpacity(0.08),
                                   blurRadius: 16,
                                   offset: const Offset(0, 4),
                                 ),
@@ -223,8 +228,6 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                           ),
                           const SizedBox(height: 20),
 
-                          // --- MULAI PERHATIKAN BLOK INI ---
-                          // Kita buat percabangan TEGAS: Jika ada pilihan ganda, cetak tombol. Jika tidak ada, cetak form ketik.
                           if (options.isNotEmpty)
                             ...options.asMap().entries.map((entry) {
                               final i = entry.key;
@@ -244,11 +247,9 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                               );
                             })
                           else
-                            // JIKA KOSONG (ISIAN SINGKAT), CETAK INI:
                             TextFormField(
                               key: ValueKey(q['id']),
                               initialValue: selectedAnswer,
-                              // Catatan: Jangan gunakan .trim() di onChanged, karena akan membuat kursor HP melompat/error saat mengetik spasi.
                               onChanged: (val) => _selectAnswer(q['id'], val),
                               decoration: InputDecoration(
                                 hintText: 'Ketik jawabanmu di sini...',
@@ -274,7 +275,6 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                               ),
                             ),
 
-                          // --- SAMPAI SINI ---
                           const SizedBox(height: 24),
                         ],
                       ),
@@ -349,8 +349,11 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                 color: Colors.red.shade50,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.wifi_off_rounded,
-                  color: Colors.red.shade400, size: 48),
+              child: Icon(
+                Icons.wifi_off_rounded,
+                color: Colors.red.shade400,
+                size: 48,
+              ),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -389,13 +392,20 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+                        Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
-                        Text('Coba Lagi',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14)),
+                        Text(
+                          'Coba Lagi',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -418,14 +428,20 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.logout_rounded,
-                            color: Colors.grey.shade600, size: 18),
+                        Icon(
+                          Icons.logout_rounded,
+                          color: Colors.grey.shade600,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
-                        Text('Keluar Akun',
-                            style: TextStyle(
-                                color: Colors.grey.shade700,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14)),
+                        Text(
+                          'Keluar Akun',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -451,8 +467,11 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                 color: Colors.blue.shade50,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.quiz_outlined,
-                  color: Colors.blue.shade300, size: 48),
+              child: Icon(
+                Icons.quiz_outlined,
+                color: Colors.blue.shade300,
+                size: 48,
+              ),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -468,7 +487,10 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
               'Dosen belum mengatur soal placement.\nSilakan hubungi dosen pengampu.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: Colors.grey.shade600, fontSize: 13, height: 1.6),
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                height: 1.6,
+              ),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -492,13 +514,20 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+                        Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
-                        Text('Cek Ulang',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14)),
+                        Text(
+                          'Cek Ulang',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -521,14 +550,20 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.logout_rounded,
-                            color: Colors.grey.shade600, size: 18),
+                        Icon(
+                          Icons.logout_rounded,
+                          color: Colors.grey.shade600,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
-                        Text('Keluar Akun',
-                            style: TextStyle(
-                                color: Colors.grey.shade700,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14)),
+                        Text(
+                          'Keluar Akun',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -542,9 +577,6 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
   }
 }
 
-// ─────────────────────────────────────────────
-// Header Widget
-// ─────────────────────────────────────────────
 class _PlacementHeader extends StatelessWidget {
   final int currentIndex;
   final int total;
@@ -573,15 +605,19 @@ class _PlacementHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.school_rounded,
-                      color: Colors.white70, size: 18),
+                  const Icon(
+                    Icons.school_rounded,
+                    color: Colors.white70,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   const Text(
                     'Placement Test',
                     style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500),
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const Spacer(),
                   _Pill(
@@ -596,9 +632,10 @@ class _PlacementHeader extends StatelessWidget {
               Text(
                 'Soal ${currentIndex + 1} dari $total',
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               ClipRRect(
@@ -606,8 +643,7 @@ class _PlacementHeader extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   backgroundColor: Colors.white24,
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                   minHeight: 6,
                 ),
               ),
@@ -630,17 +666,21 @@ class _Pill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-          color: color, borderRadius: BorderRadius.circular(20)),
-      child: Text(label,
-          style: const TextStyle(
-              color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// Option Tile
-// ─────────────────────────────────────────────
 class _OptionTile extends StatefulWidget {
   final String label;
   final String text;
@@ -769,8 +809,11 @@ class _OptionTileState extends State<_OptionTile>
                 ),
               ),
               if (widget.isSelected)
-                const Icon(Icons.check_circle_rounded,
-                    color: Color(0xFF1A56DB), size: 20),
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF1A56DB),
+                  size: 20,
+                ),
             ],
           ),
         ),
@@ -779,9 +822,6 @@ class _OptionTileState extends State<_OptionTile>
   }
 }
 
-// ─────────────────────────────────────────────
-// Navigator Bar
-// ─────────────────────────────────────────────
 class _NavigatorBar extends StatelessWidget {
   final int currentIndex;
   final int total;
@@ -820,8 +860,7 @@ class _NavigatorBar extends StatelessWidget {
             height: 44,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               itemCount: total,
               itemBuilder: (_, i) {
                 final qId = (questions[i] as Map)['id'] as int;
@@ -839,8 +878,8 @@ class _NavigatorBar extends StatelessWidget {
                       color: isActive
                           ? null
                           : isAnswered
-                              ? const Color(0xFF1A56DB).withOpacity(0.15)
-                              : Colors.grey.shade200,
+                          ? const Color(0xFF1A56DB).withOpacity(0.15)
+                          : Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -852,8 +891,8 @@ class _NavigatorBar extends StatelessWidget {
                           color: isActive
                               ? Colors.white
                               : isAnswered
-                                  ? const Color(0xFF1A56DB)
-                                  : Colors.grey.shade500,
+                              ? const Color(0xFF1A56DB)
+                              : Colors.grey.shade500,
                         ),
                       ),
                     ),
@@ -877,21 +916,29 @@ class _NavigatorBar extends StatelessWidget {
                     onTap: onPrev,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.chevron_left,
-                              color: Colors.grey.shade600, size: 18),
+                          Icon(
+                            Icons.chevron_left,
+                            color: Colors.grey.shade600,
+                            size: 18,
+                          ),
                           const SizedBox(width: 4),
-                          Text('Sebelumnya',
-                              style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 13)),
+                          Text(
+                            'Sebelumnya',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -903,7 +950,9 @@ class _NavigatorBar extends StatelessWidget {
                   onTap: isSubmitting ? null : (isLast ? onSubmit : onNext),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       gradient: gradient,
                       borderRadius: BorderRadius.circular(12),
@@ -920,24 +969,28 @@ class _NavigatorBar extends StatelessWidget {
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
                         : Row(
                             children: [
                               Text(
                                 isLast ? 'Submit' : 'Selanjutnya',
                                 style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13),
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                  isLast
-                                      ? Icons.check_rounded
-                                      : Icons.chevron_right,
-                                  color: Colors.white,
-                                  size: 18),
+                                isLast
+                                    ? Icons.check_rounded
+                                    : Icons.chevron_right,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ],
                           ),
                   ),
@@ -951,9 +1004,6 @@ class _NavigatorBar extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-// Confirm Submit Sheet
-// ─────────────────────────────────────────────
 class _ConfirmSubmitSheet extends StatelessWidget {
   final int unanswered;
 
@@ -964,7 +1014,9 @@ class _ConfirmSubmitSheet extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(28)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -974,31 +1026,41 @@ class _ConfirmSubmitSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2)),
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                  color: Colors.amber.shade50, shape: BoxShape.circle),
-              child: Icon(Icons.warning_amber_rounded,
-                  color: Colors.amber.shade700, size: 32),
+                color: Colors.amber.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.amber.shade700,
+                size: 32,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
               'Ada soal yang belum dijawab',
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0D2B6B)),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0D2B6B),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Masih ada $unanswered soal yang belum dijawab. Soal yang tidak dijawab dianggap salah.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: Colors.grey.shade600, fontSize: 13, height: 1.5),
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 24),
             Row(
@@ -1009,13 +1071,17 @@ class _ConfirmSubmitSheet extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(14)),
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       child: const Center(
-                        child: Text('Periksa Lagi',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0D2B6B))),
+                        child: Text(
+                          'Periksa Lagi',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0D2B6B),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1028,14 +1094,18 @@ class _ConfirmSubmitSheet extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                            colors: [Color(0xFF0D2B6B), Color(0xFF1A56DB)]),
+                          colors: [Color(0xFF0D2B6B), Color(0xFF1A56DB)],
+                        ),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Center(
-                        child: Text('Ya, Submit!',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
+                        child: Text(
+                          'Ya, Submit!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),

@@ -41,4 +41,22 @@ class ContentController extends Controller
         $user->favoriteFormulas()->toggle($id);
         return response()->json(['message' => 'Favorite updated']);
     }
+
+    // --- SUNTIKKAN FUNGSI ENKRIPSI TEKS INI DI PALING BAWAH SEBELUM } ---
+    public function downloadMaterialBase64($filename)
+    {
+        $fullPath = storage_path('app/public/materials/' . $filename);
+
+        if (!file_exists($fullPath)) {
+            return response()->json(['message' => 'Berkas PDF tidak ditemukan di server.'], 404);
+        }
+
+        // Baca file fisik dan ubah menjadi teks murni (Anti-Connection-Closed)
+        $fileContents = file_get_contents($fullPath);
+        $base64Data = base64_encode($fileContents);
+
+        return response()->json([
+            'base64' => $base64Data
+        ], 200);
+    }
 }

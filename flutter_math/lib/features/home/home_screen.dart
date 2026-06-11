@@ -194,33 +194,50 @@ class HomeScreen extends ConsumerWidget {
           ),
 
           // ── Topics List ──────────────────────────────────────────────
+          // ── Topics List ──────────────────────────────────────────────
           topicsAsync.when(
-            data: (topics) => SliverPadding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final topic = topics[index];
-                    return _TopicCard(
-                      index: index,
-                      orderIndex: topic.orderIndex,
-                      title: topic.title,
-                      description: topic.description ?? "",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MaterialDetailScreen(
-                            topicId: topic.id,
-                            topicTitle: topic.title,
+            // --- SUNTIKKAN PROSES PENYARINGAN DI SINI ---
+            data: (topics) {
+              // Saring dan usir ID 6 (Placement Test) dari dashboard materi siswa
+              final learningTopics = topics.where((t) => t.id != 6).toList();
+
+              if (learningTopics.isEmpty) {
+                return const SliverFillRemaining(
+                  child: Center(
+                    child: Text('Belum ada topik materi pelajaran.'),
+                  ),
+                );
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      // Gunakan list 'learningTopics' yang sudah steril
+                      final topic = learningTopics[index];
+                      return _TopicCard(
+                        index: index,
+                        orderIndex: topic.orderIndex,
+                        title: topic.title,
+                        description: topic.description ?? "",
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MaterialDetailScreen(
+                              topicId: topic.id,
+                              topicTitle: topic.title,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                  childCount: topics.length,
+                      );
+                    },
+                    childCount: learningTopics.length, // Sesuaikan jumlahnya
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
+            // -------------------------------------------------------------
             loading: () => const SliverFillRemaining(
               child: Center(
                 child: CircularProgressIndicator(

@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/topics/{topicId}/materials',   [ContentController::class, 'getMaterials']);
         Route::get('/formulas',                     [ContentController::class, 'getFormulas']);
         Route::post('/formulas/{id}/favorite',      [ContentController::class, 'toggleFavoriteFormula']);
+        Route::get('/materials/base64/{filename}',  [ContentController::class, 'downloadMaterialBase64']);
     });
 
     // Fitur 9: Ujian (Student Side - SEB Mode)
@@ -92,4 +93,61 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/questions/upload', [LecturerController::class, 'uploadQuestionsExcel']);
 
     });
+
+    Route::get('/materials/stream/{filename}', function ($filename) {
+        $fullPath = storage_path('app/public/materials/' . $filename);
+
+        if (!file_exists($fullPath)) {
+            return response()->json(['message' => 'Berkas tidak ditemukan.'], 404);
+        }
+
+        // Bersihkan sisa output memory agar tidak tersedak saat transfer biner
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $content = file_get_contents($fullPath);
+
+        return response($content, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Length' => strlen($content),
+            'Cache-Control' => 'no-cache, private',
+        ]);
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Jalur Penyelamat Berkas Besar (Anti-Connection-Closed Windows)
+|--------------------------------------------------------------------------
+*/
+Route::get('/materials/download-stable/{filename}', function ($filename) {
+    $fullPath = storage_path('app/public/materials/' . $filename);
+
+    if (!file_exists($fullPath)) {
+        return response()->json(['message' => 'Berkas tidak ditemukan.'], 404);
+    }
+
+    // MANDATORI: Hancurkan seluruh lapisan mangkok memori PHP di Windows
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    $size = filesize($fullPath);
+
+    // Kirim instruksi mentah ke hardware jaringan laptop
+    header('Content-Type: application/pdf');
+    header('Content-Length: ' . $size);
+    header('Cache-Control: no-cache, private');
+    header('Connection: keep-alive'); // Paksa Windows menjaga kabel koneksi tetap hidup!
+
+    // Buka berkas secara biner dan potong menjadi kepingan kecil 64KB
+    $file = fopen($fullPath, 'rb');
+    while (!feof($file)) {
+        echo fread($file, 65536); // Kirim per 64KB
+        flush(); // Paksa Windows menyemburkannya langsung saat ini juga ke emulator
+    }
+    fclose($file);
+
+    exit; // Matikan mesin skrip secara paksa agar tidak ada buffer tambahan dari Laravel
 });

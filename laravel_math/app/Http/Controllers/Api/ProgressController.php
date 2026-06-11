@@ -16,34 +16,45 @@ class ProgressController extends Controller
     {
         $user = $request->user();
 
-        // 1. Mengambil semua riwayat sesi ujian mahasiswa
+        // 1. Mengambil semua riwayat sesi ujian mahasiswa (Untuk tracking nilai lama)
         $sessions = \App\Models\ExamSession::where('user_id', $user->id)
             ->with(['assignment.questions', 'answers'])
             ->latest()
             ->get();
+
+        // --- SUNTIKKAN LOGIKA BARU: AMBIL SEMUA KUIS AKTIF (ANTI-GAIB) ---
+        // Mengambil semua kuis yang diterbitkan agar kuis baru (0 sesi) tetap muncul di halaman siswa
+        $allAssignments = \App\Models\Assignment::with(['topic', 'questions'])
+            ->withCount(['examSessions' => function ($q) use ($user) {
+                $q->where('user_id', $user->id); // Hitung berapa kali siswa ini sudah mencoba kuis ini
+            }])
+            ->where('status', 'published')
+            ->latest()
+            ->get();
+        // -----------------------------------------------------------------
 
         // 2. Intip data hasil placement test terbaru dari tabel khusus
         $placement = DB::table('placement_results')->where('user_id', $user->id)->first();
 
         // 3. Logika Penentuan Status & Level Adaptif Berbasis Base-100
         $hasTakenPlacement = $placement ? true : false;
-        $unlockedLevel = $placement ? $placement->unlocked_level : 1; // Default level 1 jika belum tes
+        $unlockedLevel = $placement ? $placement->unlocked_level : 1;
 
-        // Hitung secara otomatis, mahasiswa berada di Bab aktif nomor berapa (1 - 9)
-        // Misal: Level 250 -> ceil(250 / 100) = Bab 3 Aktif.
         $userProgressIndex = ceil($unlockedLevel / 100);
 
         return response()->json([
             'streak' => \App\Models\UserStreak::where('user_id', $user->id)->first(),
             'overall_percentage' => 0,
             'completed_topics' => $hasTakenPlacement ? $userProgressIndex - 1 : 0,
-
-            // --- VARIABEL KUNCI UNTUK KINERJA REAKTIF FLUTTER ---
-            'user_progress_index' => $userProgressIndex, // Menentukan gembok folder Bab Besar (1 - 9)
-            'unlocked_level' => (int)$unlockedLevel,     // Menentukan level maksimal di dalam Sub-Screen
+            'user_progress_index' => $userProgressIndex,
+            'unlocked_level' => (int)$unlockedLevel,
             'has_taken_placement' => $hasTakenPlacement,
 
             'sessions' => $sessions,
+
+            // --- KIRIM DAFTAR KUIS UTUH KE FLUTTER ---
+            'assignments' => $allAssignments,
+            // -----------------------------------------
         ]);
     }
 }

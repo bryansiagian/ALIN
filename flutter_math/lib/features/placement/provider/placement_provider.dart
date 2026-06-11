@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/core/api/api_client.dart';
 import 'package:flutter_math/features/placement/service/placement_service.dart';
+import 'package:flutter_math/core/api/api_client.dart';      
+import 'package:flutter_math/core/api/api_endpoints.dart';   
 
 // ─── Service Provider ──────────────────────────────────────────────────────
 
@@ -25,11 +27,20 @@ class PlacementNotifier
     return service.getQuestions();
   }
 
-  /// Submit jawaban dan kembalikan hasil { score, grade }.
-  Future<Map<String, dynamic>> submitPlacement(
-      Map<int, String> answers) async {
-    final service = ref.read(placementServiceProvider);
-    return service.submitAnswers(answers);
+    Future<Map<String, dynamic>> submitPlacement(List<Map<String, dynamic>> answers) async {
+    try {
+      // --- PERBAIKAN MUTLAK: Membaca ApiClient langsung menggunakan sensor ref Riverpod ---
+      final response = await ref.read(apiClientProvider).dio.post(
+        ApiEndpoints.placementSubmit,
+        data: {
+          'answers': answers,
+        },
+      );
+      
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Gagal mengirimkan jawaban placement: $e');
+    }
   }
 }
 
