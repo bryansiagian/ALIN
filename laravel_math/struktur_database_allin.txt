@@ -1,0 +1,357 @@
+LAPORAN STRUKTUR DATABASE ALLIN
+
+========================================
+ TABEL: assignment_question 
+========================================
+- id                        | bigint unsigned     
+- assignment_id             | bigint unsigned     
+- question_id               | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: assignments 
+========================================
+- id                        | bigint unsigned     
+- lecturer_id               | bigint unsigned     
+- topic_id                  | bigint unsigned     
+- title                     | varchar(255)        
+- description               | text                
+- start_time                | timestamp           
+- password                  | varchar(255)        
+- deadline                  | timestamp           
+- duration_minutes          | int                 
+- question_count            | int                 
+- is_safe_exam              | tinyint(1)          
+- allow_reattempt           | tinyint(1)          
+- attempt_limit             | int                 
+- show_results              | tinyint(1)          
+- status                    | enum('draft','published','closed')
+- is_placement              | tinyint(1)          
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: badges 
+========================================
+- id                        | bigint unsigned     
+- name                      | varchar(255)        
+- description               | varchar(255)        
+- icon_url                  | varchar(255)        
+- requirement_criteria      | json                
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: cache 
+========================================
+- key                       | varchar(255)        
+- value                     | mediumtext          
+- expiration                | int                 
+
+========================================
+ TABEL: cache_locks 
+========================================
+- key                       | varchar(255)        
+- owner                     | varchar(255)        
+- expiration                | int                 
+
+========================================
+ TABEL: chats 
+========================================
+- id                        | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: daily_challenges 
+========================================
+- id                        | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: exam_answers 
+========================================
+- id                        | bigint unsigned     
+- exam_session_id           | bigint unsigned     
+- question_id               | bigint unsigned     
+- user_answer               | text                
+- is_correct                | tinyint(1)          
+- score                     | int                 
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: exam_sessions 
+========================================
+- id                        | bigint unsigned     
+- assignment_id             | bigint unsigned     
+- user_id                   | bigint unsigned     
+- started_at                | timestamp           
+- submitted_at              | timestamp           
+- expired_at                | timestamp           
+- total_score               | int                 
+- status                    | enum('pending','ongoing','submitted','expired')
+- is_locked                 | tinyint(1)          
+- violation_count           | int                 
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: failed_jobs 
+========================================
+- id                        | bigint unsigned     
+- uuid                      | varchar(255)        
+- connection                | text                
+- queue                     | text                
+- payload                   | longtext            
+- exception                 | longtext            
+- failed_at                 | timestamp           
+
+========================================
+ TABEL: formulas 
+========================================
+- id                        | bigint unsigned     
+- topic_id                  | bigint unsigned     
+- title                     | varchar(255)        
+- latex_expression          | text                
+- description               | text                
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: forum_replies 
+========================================
+- id                        | bigint unsigned     
+- thread_id                 | bigint unsigned     
+- user_id                   | bigint unsigned     
+- parent_reply_id           | bigint unsigned     
+- content                   | text                
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: forum_threads 
+========================================
+- id                        | bigint unsigned     
+- user_id                   | bigint unsigned     
+- topic_id                  | bigint unsigned     
+- title                     | varchar(255)        
+- body                      | text                
+- image_url                 | varchar(255)        
+- views_count               | int                 
+- is_pinned                 | tinyint(1)          
+- is_closed                 | tinyint(1)          
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: job_batches 
+========================================
+- id                        | varchar(255)        
+- name                      | varchar(255)        
+- total_jobs                | int                 
+- pending_jobs              | int                 
+- failed_jobs               | int                 
+- failed_job_ids            | longtext            
+- options                   | mediumtext          
+- cancelled_at              | int                 
+- created_at                | int                 
+- finished_at               | int                 
+
+========================================
+ TABEL: jobs 
+========================================
+- id                        | bigint unsigned     
+- queue                     | varchar(255)        
+- payload                   | longtext            
+- attempts                  | tinyint unsigned    
+- reserved_at               | int unsigned        
+- available_at              | int unsigned        
+- created_at                | int unsigned        
+
+========================================
+ TABEL: leaderboards 
+========================================
+- id                        | bigint unsigned     
+- user_id                   | bigint unsigned     
+- points                    | int                 
+- period                    | enum('weekly','monthly','all_time')
+- rank                      | int                 
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: materials 
+========================================
+- id                        | bigint unsigned     
+- topic_id                  | bigint unsigned     
+- title                     | varchar(255)        
+- file_path                 | varchar(255)        
+- content                   | text                
+- content_type              | enum('text','formula','animation')
+- order_index               | int                 
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: migrations 
+========================================
+- id                        | int unsigned        
+- migration                 | varchar(255)        
+- batch                     | int                 
+
+========================================
+ TABEL: password_reset_tokens 
+========================================
+- email                     | varchar(255)        
+- token                     | varchar(255)        
+- created_at                | timestamp           
+
+========================================
+ TABEL: personal_access_tokens 
+========================================
+- id                        | bigint unsigned     
+- tokenable_type            | varchar(255)        
+- tokenable_id              | bigint unsigned     
+- name                      | text                
+- token                     | varchar(64)         
+- abilities                 | text                
+- last_used_at              | timestamp           
+- expires_at                | timestamp           
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: placement_results 
+========================================
+- id                        | bigint unsigned     
+- user_id                   | bigint unsigned     
+- score                     | int                 
+- unlocked_level            | int                 
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: question_banks 
+========================================
+- id                        | bigint unsigned     
+- topic_id                  | bigint unsigned     
+- question_text             | text                
+- question_type             | enum('multiple_choice','essay')
+- difficulty                | enum('easy','medium','hard')
+- options                   | json                
+- correct_answer            | text                
+- explanation               | text                
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: questions 
+========================================
+- id                        | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: quiz_answers 
+========================================
+- id                        | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: quizzes 
+========================================
+- id                        | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: scrapbooks 
+========================================
+- id                        | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: sessions 
+========================================
+- id                        | varchar(255)        
+- user_id                   | bigint unsigned     
+- ip_address                | varchar(45)         
+- user_agent                | text                
+- payload                   | longtext            
+- last_activity             | int                 
+
+========================================
+ TABEL: topics 
+========================================
+- id                        | bigint unsigned     
+- title                     | varchar(255)        
+- slug                      | varchar(255)        
+- description               | text                
+- order_index               | int                 
+- is_active                 | tinyint(1)          
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: user_badges 
+========================================
+- id                        | bigint unsigned     
+- user_id                   | bigint unsigned     
+- badge_id                  | bigint unsigned     
+- earned_at                 | timestamp           
+
+========================================
+ TABEL: user_formula_favorites 
+========================================
+- id                        | bigint unsigned     
+- user_id                   | bigint unsigned     
+- formula_id                | bigint unsigned     
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: user_progress 
+========================================
+- id                        | bigint unsigned     
+- user_id                   | bigint unsigned     
+- topic_id                  | bigint unsigned     
+- score_avg                 | int                 
+- time_spent_seconds        | int                 
+- status                    | enum('not_started','in_progress','completed')
+- last_activity             | timestamp           
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: user_streaks 
+========================================
+- id                        | bigint unsigned     
+- user_id                   | bigint unsigned     
+- current_streak            | int                 
+- longest_streak            | int                 
+- last_active_date          | date                
+- created_at                | timestamp           
+- updated_at                | timestamp           
+
+========================================
+ TABEL: users 
+========================================
+- id                        | bigint unsigned     
+- name                      | varchar(255)        
+- email                     | varchar(255)        
+- password                  | varchar(255)        
+- nim                       | varchar(255)        
+- prodi                     | varchar(255)        
+- nidn                      | varchar(255)        
+- role                      | enum('student','lecturer','admin')
+- avatar                    | varchar(255)        
+- remember_token            | varchar(100)        
+- has_taken_placement       | tinyint(1)          
+- created_at                | timestamp           
+- updated_at                | timestamp           
+

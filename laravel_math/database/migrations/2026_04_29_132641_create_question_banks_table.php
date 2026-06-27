@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('topic_id')->constrained('topics')->onDelete('cascade');
             $table->text('question_text');
+            $table->string('question_image')->nullable(); 
             $table->enum('question_type', ['multiple_choice', 'essay']); // Sesuai DBML
             $table->enum('difficulty', ['easy', 'medium', 'hard']);
             $table->json('options')->nullable(); // Untuk menyimpan pilihan A, B, C, D

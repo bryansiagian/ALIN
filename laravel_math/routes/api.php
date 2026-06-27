@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('is-lecturer')->prefix('lecturer')->group(function () {
         Route::get('/assignments',              [LecturerController::class, 'index']);
         Route::post('/assignments',             [LecturerController::class, 'store']);
+        Route::post('/upload-image',   [LecturerController::class, 'uploadQuestionImage']);
         Route::put('/questions/{id}',           [LecturerController::class, 'updateQuestion']);
         Route::get('/assignments/{id}/results', [LecturerController::class, 'getResults']);
         Route::get('/assignments/{id}/questions',[LecturerController::class, 'getQuestions']);
@@ -91,6 +92,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/assignments/{id}/set-placement', [PlacementController::class, 'setPlacementAssignment']);
         Route::get('/placement/results', [PlacementController::class, 'getLecturerPlacementResults']);
         Route::post('/questions/upload', [LecturerController::class, 'uploadQuestionsExcel']);
+
+        Route::prefix('placement-management')->group(function () {
+            Route::post('/questions', [App\Http\Controllers\Api\PlacementManagementController::class, 'storePlacementQuestion']);
+            Route::get('/questions', [App\Http\Controllers\Api\PlacementManagementController::class, 'getPlacementQuestions']);
+            Route::post('/upload', [App\Http\Controllers\Api\PlacementManagementController::class, 'uploadPlacementExcel']);
+        });
 
     });
 
@@ -151,3 +158,7 @@ Route::get('/materials/download-stable/{filename}', function ($filename) {
 
     exit; // Matikan mesin skrip secara paksa agar tidak ada buffer tambahan dari Laravel
 });
+
+Route::get('/login', function () {
+    return response()->json(['message' => 'Unauthenticated'], 401);
+})->name('login');

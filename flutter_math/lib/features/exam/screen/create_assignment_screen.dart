@@ -1,10 +1,12 @@
 // lib/features/exam/screen/create_assignment_screen.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/exam/service/lecturer_service.dart';
 import 'package:flutter_math/core/api/api_client.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CreateAssignmentScreen extends ConsumerStatefulWidget {
   const CreateAssignmentScreen({super.key});
@@ -15,28 +17,18 @@ class CreateAssignmentScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
-  with TickerProviderStateMixin {
- // ── Controllers ──────────────────────────────────────────────────────────
+    with TickerProviderStateMixin {
+  // ── Controllers ──────────────────────────────────────────────────────────
   final _titleController = TextEditingController();
-  // --- SUNTIKKAN KONTROLER WAKTU MULAI DI SINI ---
   final _startTimeController = TextEditingController(
-    text: DateTime.now()
-        .toString()
-        .split('.')
-        .first, // Set default waktu sekarang
+    text: DateTime.now().toUtc().toIso8601String(),
   );
-  // -----------------------------------------------
   final _deadlineController = TextEditingController(
-    text: DateTime.now()
-        .add(const Duration(days: 1))
-        .toString()
-        .split('.')
-        .first,
+    text: DateTime.now().add(const Duration(days: 1)).toUtc().toIso8601String(),
   );
-  // --- SUNTIKKAN KONTROLER PASSWORD DI SINI ---
   final _passwordController = TextEditingController();
-  // --------------------------------------------
   final _scrollController = ScrollController();
+  final _imagePicker = ImagePicker();
 
   // ── State ─────────────────────────────────────────────────────────────────
   bool _isSafeExam = true;
@@ -45,10 +37,16 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
   bool _showResults = true;
   bool _isSubmitting = false;
   bool _obscurePassword = true;
+  int _currentStep = 0;
 
-  // Step tracker
-  int _currentStep = 0; // 0 = Info, 1 = Soal
-
+  // Setiap soal punya:
+  // 'text', 'a', 'b', 'c', 'd' → TextEditingController (teks)
+  // 'question_image' → File? (gambar soal)
+  // 'question_image_url' → String? (URL setelah upload)
+  // 'option_images' → List<File?> [a, b, c, d]
+  // 'option_image_urls' → List<String?> [a, b, c, d]
+  // 'key' → String (kunci jawaban)
+  // 'expanded' → bool
   List<Map<String, dynamic>> _questions = [
     {
       'text': TextEditingController(),
@@ -56,6 +54,10 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
       'b': TextEditingController(),
       'c': TextEditingController(),
       'd': TextEditingController(),
+      'question_image': null,
+      'question_image_url': null,
+      'option_images': [null, null, null, null],
+      'option_image_urls': [null, null, null, null],
       'key': 'A',
       'expanded': true,
     },
@@ -74,10 +76,10 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
   static const Color _accentRed = Color(0xFFEF4444);
 
   static const List<Color> _optionColors = [
-    Color(0xFF3B82F6), // A - biru
-    Color(0xFF8B5CF6), // B - ungu
-    Color(0xFF06B6D4), // C - teal
-    Color(0xFFF59E0B), // D - amber
+    Color(0xFF3B82F6),
+    Color(0xFF8B5CF6),
+    Color(0xFF06B6D4),
+    Color(0xFFF59E0B),
   ];
 
   late AnimationController _fadeController;
@@ -112,7 +114,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
   void _addQuestion() {
     HapticFeedback.lightImpact();
     setState(() {
-      // Collapse semua yang ada
       for (final q in _questions) q['expanded'] = false;
       _questions.add({
         'text': TextEditingController(),
@@ -120,11 +121,14 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
         'b': TextEditingController(),
         'c': TextEditingController(),
         'd': TextEditingController(),
+        'question_image': null,
+        'question_image_url': null,
+        'option_images': [null, null, null, null],
+        'option_image_urls': [null, null, null, null],
         'key': 'A',
         'expanded': true,
       });
     });
-    // Scroll ke bawah setelah build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -140,14 +144,84 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
     setState(() => _questions.removeAt(index));
   }
 
+  // ── Upload gambar ke server ───────────────────────────────────────────────
+
+  Future<String?> _uploadImage(File imageFile) async {
+    try {
+      final service = LecturerService(ref.read(apiClientProvider).dio);
+      final url = await service.uploadQuestionImage(imageFile);
+      return url;
+    } catch (e) {
+      if (mounted) _showToast("Gagal upload gambar: $e", isError: true);
+      return null;
+    }
+  }
+
+  Future<void> _pickQuestionImage(int qIdx) async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    setState(() {
+      _questions[qIdx]['question_image'] = File(picked.path);
+      _questions[qIdx]['question_image_url'] =
+          null; // reset, akan di-upload saat submit
+    });
+  }
+
+  Future<void> _pickOptionImage(int qIdx, int optIdx) async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    setState(() {
+      final images = List<dynamic>.from(
+        _questions[qIdx]['option_images'] as List,
+      );
+      images[optIdx] = File(picked.path);
+      _questions[qIdx]['option_images'] = images;
+
+      final urls = List<dynamic>.from(
+        _questions[qIdx]['option_image_urls'] as List,
+      );
+      urls[optIdx] = null;
+      _questions[qIdx]['option_image_urls'] = urls;
+    });
+  }
+
+  void _removeQuestionImage(int qIdx) {
+    setState(() {
+      _questions[qIdx]['question_image'] = null;
+      _questions[qIdx]['question_image_url'] = null;
+    });
+  }
+
+  void _removeOptionImage(int qIdx, int optIdx) {
+    setState(() {
+      final images = List<dynamic>.from(
+        _questions[qIdx]['option_images'] as List,
+      );
+      images[optIdx] = null;
+      _questions[qIdx]['option_images'] = images;
+
+      final urls = List<dynamic>.from(
+        _questions[qIdx]['option_image_urls'] as List,
+      );
+      urls[optIdx] = null;
+      _questions[qIdx]['option_image_urls'] = urls;
+    });
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+
   void _submitAll() async {
-    // Validasi judul
     if (_titleController.text.trim().isEmpty) {
       _showToast("Judul kuis tidak boleh kosong", isError: true);
       setState(() => _currentStep = 0);
       return;
     }
-    // Validasi soal
     for (int i = 0; i < _questions.length; i++) {
       final q = _questions[i];
       if ((q['text'] as TextEditingController).text.trim().isEmpty) {
@@ -159,32 +233,71 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
     setState(() => _isSubmitting = true);
     HapticFeedback.lightImpact();
 
+    // Upload semua gambar dulu
+    for (int i = 0; i < _questions.length; i++) {
+      final q = _questions[i];
+
+      // Upload gambar soal
+      if (q['question_image'] != null && q['question_image_url'] == null) {
+        final url = await _uploadImage(q['question_image'] as File);
+        if (url == null) {
+          setState(() => _isSubmitting = false);
+          return;
+        }
+        _questions[i]['question_image_url'] = url;
+      }
+
+      // Upload gambar tiap opsi
+      final optImages = List<dynamic>.from(q['option_images'] as List);
+      final optUrls = List<dynamic>.from(q['option_image_urls'] as List);
+      for (int j = 0; j < 4; j++) {
+        if (optImages[j] != null && optUrls[j] == null) {
+          final url = await _uploadImage(optImages[j] as File);
+          if (url == null) {
+            setState(() => _isSubmitting = false);
+            return;
+          }
+          optUrls[j] = url;
+        }
+      }
+      _questions[i]['option_image_urls'] = optUrls;
+    }
+
     final service = LecturerService(ref.read(apiClientProvider).dio);
 
-    List<Map<String, dynamic>> finalQuestions = _questions
-        .map(
-          (q) => {
-            'question_text': (q['text'] as TextEditingController).text,
-            'options': [
-              {'key': 'A', 'text': (q['a'] as TextEditingController).text},
-              {'key': 'B', 'text': (q['b'] as TextEditingController).text},
-              {'key': 'C', 'text': (q['c'] as TextEditingController).text},
-              {'key': 'D', 'text': (q['d'] as TextEditingController).text},
-            ],
-            'correct_answer': q['key'],
+    final List<String> optionKeys = ['a', 'b', 'c', 'd'];
+    final List<String> optionLabels = ['A', 'B', 'C', 'D'];
+
+    List<Map<String, dynamic>> finalQuestions = _questions.map((q) {
+      final optUrls = List<dynamic>.from(q['option_image_urls'] as List);
+      return {
+        'question_text': (q['text'] as TextEditingController).text,
+        'question_image': q['question_image_url'],
+        'options': List.generate(
+          4,
+          (i) => {
+            'key': optionLabels[i],
+            'text': (q[optionKeys[i]] as TextEditingController).text,
+            'image': optUrls[i],
           },
-        )
-        .toList();
+        ),
+        'correct_answer': q['key'],
+      };
+    }).toList();
 
     try {
       await service.createAssignment({
         'topic_id': 1,
         'title': _titleController.text,
-        'start_time': _startTimeController.text,
+        'start_time': DateTime.parse(
+          _startTimeController.text,
+        ).toUtc().toIso8601String(),
         'password': _passwordController.text.trim().isEmpty
             ? null
             : _passwordController.text.trim(),
-        'deadline': _deadlineController.text,
+        'deadline': DateTime.parse(
+          _deadlineController.text,
+        ).toUtc().toIso8601String(),
         'duration_minutes': 60,
         'is_safe_exam': _isSafeExam,
         'questions': finalQuestions,
@@ -303,7 +416,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                     ),
             ),
           ),
-          // Submit button
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
@@ -381,14 +493,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             ),
           ),
         ),
-        // title: const Text(
-        //   "Buat Kuis",
-        //   style: TextStyle(
-        //     color: Colors.white,
-        //     fontSize: 16,
-        //     fontWeight: FontWeight.w600,
-        //   ),
-        // ),
       ),
     );
   }
@@ -503,10 +607,15 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                   icon: Icons.title_rounded,
                 ),
                 const SizedBox(height: 12),
-                _buildTextField(
+                _buildDateTimeField(
+                  controller: _startTimeController,
+                  label: "Waktu Mulai",
+                  icon: Icons.play_circle_outline_rounded,
+                ),
+                const SizedBox(height: 12),
+                _buildDateTimeField(
                   controller: _deadlineController,
                   label: "Deadline",
-                  hint: "yyyy-mm-dd hh:mm:ss",
                   icon: Icons.calendar_today_rounded,
                 ),
               ],
@@ -557,7 +666,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                     ),
                   ),
                 ],
-
                 _divider(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -625,7 +733,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // CTA ke tab soal
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
@@ -741,6 +848,8 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
     final String currentKey = q['key'] as String;
     final List<String> optionKeys = ['a', 'b', 'c', 'd'];
     final List<String> optionLabels = ['A', 'B', 'C', 'D'];
+    final File? questionImage = q['question_image'] as File?;
+    final List<dynamic> optionImages = q['option_images'] as List<dynamic>;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -762,7 +871,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
       ),
       child: Column(
         children: [
-          // Header soal — tap to expand/collapse
+          // Header soal
           GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
@@ -783,7 +892,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
               ),
               child: Row(
                 children: [
-                  // Nomor soal
                   Container(
                     width: 32,
                     height: 32,
@@ -848,7 +956,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                       ],
                     ),
                   ),
-                  // Delete button
                   if (_questions.length > 1)
                     GestureDetector(
                       onTap: () => _removeQuestion(idx),
@@ -879,7 +986,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             ),
           ),
 
-          // Body soal (collapsed/expanded)
+          // Body soal
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
@@ -891,7 +998,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Pertanyaan
+                          // Pertanyaan (teks)
                           _buildTextField(
                             controller: q['text'] as TextEditingController,
                             label: "Pertanyaan",
@@ -899,7 +1006,17 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                             icon: Icons.help_outline_rounded,
                             maxLines: 3,
                           ),
+                          const SizedBox(height: 10),
+
+                          // ── Gambar soal ──────────────────────────────────
+                          _buildImagePicker(
+                            label: "Gambar Soal (opsional)",
+                            imageFile: questionImage,
+                            onPick: () => _pickQuestionImage(idx),
+                            onRemove: () => _removeQuestionImage(idx),
+                          ),
                           const SizedBox(height: 14),
+
                           // Pilihan jawaban
                           const Text(
                             "Pilihan Jawaban",
@@ -912,81 +1029,103 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                           const SizedBox(height: 8),
                           ...List.generate(4, (i) {
                             final color = _optionColors[i];
+                            final optImage = optionImages[i] as File?;
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    width: 28,
-                                    height: 28,
-                                    decoration: BoxDecoration(
-                                      color: color.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: color.withOpacity(0.3),
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        optionLabels[i],
-                                        style: TextStyle(
-                                          color: color,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
+                                  Row(
+                                    children: [
+                                      // Label opsi (A/B/C/D)
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: color.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: color.withOpacity(0.3),
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: TextField(
-                                      controller:
-                                          q[optionKeys[i]]
-                                              as TextEditingController,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: _textPrimary,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText:
-                                            "Pilihan ${optionLabels[i]}...",
-                                        hintStyle: const TextStyle(
-                                          color: _textSecondary,
-                                          fontSize: 13,
-                                        ),
-                                        filled: true,
-                                        fillColor: color.withOpacity(0.04),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
+                                        child: Center(
+                                          child: Text(
+                                            optionLabels[i],
+                                            style: TextStyle(
+                                              color: color,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: color.withOpacity(0.2),
-                                          ),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: color.withOpacity(0.2),
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: color,
-                                            width: 1.5,
                                           ),
                                         ),
                                       ),
+                                      const SizedBox(width: 10),
+                                      // Field teks opsi
+                                      Expanded(
+                                        child: TextField(
+                                          controller:
+                                              q[optionKeys[i]]
+                                                  as TextEditingController,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: _textPrimary,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                "Pilihan ${optionLabels[i]}...",
+                                            hintStyle: const TextStyle(
+                                              color: _textSecondary,
+                                              fontSize: 13,
+                                            ),
+                                            filled: true,
+                                            fillColor: color.withOpacity(0.04),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 10,
+                                                ),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              borderSide: BorderSide(
+                                                color: color.withOpacity(0.2),
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              borderSide: BorderSide(
+                                                color: color.withOpacity(0.2),
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              borderSide: BorderSide(
+                                                color: color,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  // ── Gambar opsi ──────────────────────────
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 38),
+                                    child: _buildImagePicker(
+                                      label:
+                                          "Gambar opsi ${optionLabels[i]} (opsional)",
+                                      imageFile: optImage,
+                                      onPick: () => _pickOptionImage(idx, i),
+                                      onRemove: () =>
+                                          _removeOptionImage(idx, i),
+                                      compact: true,
+                                      accentColor: color,
                                     ),
                                   ),
                                 ],
@@ -1075,6 +1214,116 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Image Picker Widget ───────────────────────────────────────────────────
+
+  Widget _buildImagePicker({
+    required String label,
+    required File? imageFile,
+    required VoidCallback onPick,
+    required VoidCallback onRemove,
+    bool compact = false,
+    Color accentColor = _primaryLight,
+  }) {
+    if (imageFile != null) {
+      // Tampilkan preview gambar
+      return Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.file(
+              imageFile,
+              width: double.infinity,
+              height: compact ? 80 : 140,
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Tombol hapus gambar
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 14,
+                ),
+              ),
+            ),
+          ),
+          // Tombol ganti gambar
+          Positioned(
+            bottom: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: onPick,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.edit_rounded, color: Colors.white, size: 12),
+                    SizedBox(width: 4),
+                    Text(
+                      "Ganti",
+                      style: TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Belum ada gambar — tampilkan tombol pilih
+    return GestureDetector(
+      onTap: onPick,
+      child: Container(
+        width: double.infinity,
+        height: compact ? 44 : 60,
+        decoration: BoxDecoration(
+          color: accentColor.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: accentColor.withOpacity(0.25),
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_photo_alternate_rounded,
+              color: accentColor,
+              size: compact ? 16 : 18,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: compact ? 11 : 12,
+                color: accentColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1291,6 +1540,94 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             activeTrackColor: _primaryLight.withOpacity(0.3),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDateTimeField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    String displayText = '';
+    try {
+      final dt = DateTime.parse(controller.text).toLocal();
+      displayText =
+          '${dt.day.toString().padLeft(2, '0')}-'
+          '${dt.month.toString().padLeft(2, '0')}-'
+          '${dt.year}  '
+          '${dt.hour.toString().padLeft(2, '0')}:'
+          '${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {}
+
+    return GestureDetector(
+      onTap: () async {
+        DateTime initial;
+        try {
+          initial = DateTime.parse(controller.text).toLocal();
+        } catch (_) {
+          initial = DateTime.now();
+        }
+
+        final date = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: DateTime.now().subtract(const Duration(days: 1)),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+        );
+        if (date == null || !mounted) return;
+
+        final time = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.fromDateTime(initial),
+        );
+        if (time == null || !mounted) return;
+
+        final localDateTime = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          time.hour,
+          time.minute,
+        );
+        controller.text = localDateTime.toUtc().toIso8601String();
+        setState(() {});
+      },
+      child: AbsorbPointer(
+        child: TextField(
+          controller: TextEditingController(text: displayText),
+          style: const TextStyle(fontSize: 14, color: _textPrimary),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: "Ketuk untuk memilih waktu",
+            labelStyle: const TextStyle(color: _textSecondary, fontSize: 13),
+            hintStyle: const TextStyle(color: _textSecondary, fontSize: 13),
+            prefixIcon: Icon(icon, color: _primaryLight, size: 18),
+            suffixIcon: const Icon(
+              Icons.edit_calendar_rounded,
+              color: _primaryLight,
+              size: 18,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF8FAFF),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _primaryLight.withOpacity(0.2)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _primaryLight.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _primaryMid, width: 1.5),
+            ),
+          ),
+        ),
       ),
     );
   }

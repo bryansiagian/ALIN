@@ -12,11 +12,11 @@ class PlacementResult extends Model
         'assignment_id',
         'score',
         'grade',
+        'unlocked_level', // <--- HARUS ADA DI SINI
         'taken_at',
     ];
 
     protected $casts = [
-        'taken_at' => 'datetime',
         'score'    => 'float',
     ];
 

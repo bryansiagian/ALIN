@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert'; // Wajib untuk jsonDecode
 import 'package:flutter_math/features/placement/provider/placement_provider.dart';
 import 'package:flutter_math/features/placement/screen/placement_result_screen.dart';
 import 'package:flutter_math/features/auth/provider/auth_provider.dart';
@@ -83,13 +84,11 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
     setState(() => _isSubmitting = true);
 
     try {
-      // --- MANIPULASI DATA: KONVERSI MAP MENJADI LIST OF OBJECTS ---
       final List<Map<String, dynamic>> formattedAnswers = _answers.entries.map((
         entry,
       ) {
         return {'question_id': entry.key, 'selected_option': entry.value};
       }).toList();
-      // -------------------------------------------------------------
 
       final result = await ref
           .read(placementProvider.notifier)
@@ -115,9 +114,8 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
             transitionDuration: const Duration(milliseconds: 400),
           ),
         );
-      } // <--- Memperbaiki kurung tutup milik 'if (mounted)'
+      }
     } catch (e) {
-      // <--- Memperbaiki struktur penutup blok 'try'
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -151,8 +149,42 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
         data: (questions) {
           if (questions.isEmpty) return _buildEmptyState();
           final q = questions[_currentIndex];
-          final rawOptions = q['options'] as List?;
-          final options = rawOptions?.cast<Map<String, dynamic>>() ?? [];
+
+          // --- FIX: DECODE OPTIONS DENGAN AMAN ---
+          // --- FIX: DECODE OPTIONS DENGAN AMAN ---
+          dynamic rawOptions = q['options'];
+          List<Map<String, dynamic>> options = [];
+
+          if (rawOptions is String) {
+            try {
+              Map<String, dynamic> decoded = jsonDecode(rawOptions);
+              options = decoded.entries
+                  .map((e) => {'label': e.key, 'text': e.value.toString()})
+                  .toList();
+            } catch (e) {
+              options = [];
+            }
+          } else if (rawOptions is List) {
+            options = rawOptions.map((item) {
+              if (item is Map) {
+                return Map<String, dynamic>.from(item);
+              }
+              return <String, dynamic>{};
+            }).toList();
+          } else if (rawOptions is Map) {
+            // ---> INI BAGIAN YANG SEBELUMNYA HILANG <---
+            // Tangkap data jika API langsung mengirimkan Object/Map {"A": "...", "B": "..."}
+            options = rawOptions.entries
+                .map(
+                  (e) => {
+                    'label': e.key.toString(),
+                    'text': e.value.toString(),
+                  },
+                )
+                .toList();
+          }
+          // ----------------------------------------
+
           final selectedAnswer = _answers[q['id']];
           final progress = (_currentIndex + 1) / questions.length;
           final answeredCount = _answers.length;
@@ -229,13 +261,10 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                           const SizedBox(height: 20),
 
                           if (options.isNotEmpty)
-                            ...options.asMap().entries.map((entry) {
-                              final i = entry.key;
-                              final opt = entry.value;
-                              final label =
-                                  opt['label'] as String? ??
-                                  String.fromCharCode(65 + i);
-                              final text = opt['text'] as String? ?? '';
+                            ...options.map((opt) {
+                              final label = (opt['label'] ?? opt['key'] ?? '')
+                                  .toString();
+                              final text = (opt['text'] ?? '').toString();
                               final isSelected = selectedAnswer == label;
 
                               return _OptionTile(
@@ -245,36 +274,7 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen>
                                 onTap: () => _selectAnswer(q['id'], label),
                                 gradient: _grad,
                               );
-                            })
-                          else
-                            TextFormField(
-                              key: ValueKey(q['id']),
-                              initialValue: selectedAnswer,
-                              onChanged: (val) => _selectAnswer(q['id'], val),
-                              decoration: InputDecoration(
-                                hintText: 'Ketik jawabanmu di sini...',
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF1A56DB),
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-
+                            }),
                           const SizedBox(height: 24),
                         ],
                       ),

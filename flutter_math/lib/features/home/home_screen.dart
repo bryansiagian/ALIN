@@ -1,3 +1,4 @@
+import 'dart:math' as math; // Ditambahkan untuk animasi ombak
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/learning/provider/learning_provider.dart';
@@ -6,11 +7,35 @@ import 'package:flutter_math/features/auth/provider/auth_provider.dart';
 import 'package:flutter_math/features/exam/screen/assignment_list_screen.dart';
 import 'package:flutter_math/features/learning/screen/level_map_screen.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _waveController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inisialisasi controller untuk animasi ombak
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _waveController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final topicsAsync = ref.watch(topicsProvider);
     final user = ref.watch(authProvider).user;
 
@@ -19,87 +44,136 @@ class HomeScreen extends ConsumerWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── Collapsible Header ──────────────────────────────────────
+          // ── Header Modifikasi (Wave & Concave) ──────────────────────
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 240, // Sedikit lebih tinggi untuk efek cekung
             floating: false,
             pinned: true,
             elevation: 0,
+            stretch: true,
             backgroundColor: const Color(0xFF1A5FD4),
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF1A40A8),
-                      Color(0xFF2D6EE8),
-                      Color(0xFF4B8EFF),
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 16, 22, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Row(
+              background: ClipPath(
+                clipper:
+                    HeaderClipper(), // Clipper kustom untuk bagian bawah cekung
+                child: Stack(
+                  children: [
+                    // Background Gradient
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF1A40A8),
+                            Color(0xFF2D6EE8),
+                            Color(0xFF4B8EFF),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Animasi Ombak 1
+                    AnimatedBuilder(
+                      animation: _waveController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          painter: WavePainter(
+                            waveAnimation: _waveController.value,
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                          child: Container(),
+                        );
+                      },
+                    ),
+
+                    // Animasi Ombak 2 (Berlawanan arah)
+                    AnimatedBuilder(
+                      animation: _waveController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          painter: WavePainter(
+                            waveAnimation: _waveController.value,
+                            color: Colors.white.withOpacity(0.15),
+                            isReversed: true,
+                          ),
+                          child: Container(),
+                        );
+                      },
+                    ),
+
+                    // Konten Header
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          22,
+                          16,
+                          22,
+                          40,
+                        ), // Bottom padding ditambah
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  "∑",
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                            Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      "∑",
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                 ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  "ALIN",
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              "Halo, ${user?.name ?? 'Mahasiswa'}! 👋",
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              "ALIN",
+                            const SizedBox(height: 4),
+                            Text(
+                              "Siap belajar Aljabar Linear hari ini?",
                               style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: 4,
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.85),
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 18),
-                        Text(
-                          "Halo, ${user?.name ?? 'Mahasiswa'}! 👋",
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Siap belajar Aljabar Linear hari ini?",
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            color: Colors.white.withOpacity(0.80),
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -114,8 +188,11 @@ class HomeScreen extends ConsumerWidget {
                       color: Colors.white.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.logout_rounded,
-                        color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   tooltip: "Keluar",
                 ),
@@ -123,36 +200,29 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
 
-          // ── Body Content ────────────────────────────────────────────
+          // ── Body Content (Tetap Sesuai Aslinya) ──────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Assignment Banner ────────────────────────────
                   _AssignmentBanner(
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const AssignmentListScreen()),
+                        builder: (_) => const AssignmentListScreen(),
+                      ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   _LevelMapBanner(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => LevelMapScreen(),
-                      ), // Ini rute menuju petamu!
+                      MaterialPageRoute(builder: (_) => LevelMapScreen()),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
-                  // ── Section Title ────────────────────────────────
                   Row(
                     children: [
                       Container(
@@ -183,8 +253,7 @@ class HomeScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(left: 14),
                     child: Text(
                       "Pilih topik untuk mulai belajar",
-                      style: TextStyle(
-                          fontSize: 12.5, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 12.5, color: Colors.grey[500]),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -193,14 +262,9 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // ── Topics List ──────────────────────────────────────────────
-          // ── Topics List ──────────────────────────────────────────────
           topicsAsync.when(
-            // --- SUNTIKKAN PROSES PENYARINGAN DI SINI ---
             data: (topics) {
-              // Saring dan usir ID 6 (Placement Test) dari dashboard materi siswa
               final learningTopics = topics.where((t) => t.id != 6).toList();
-
               if (learningTopics.isEmpty) {
                 return const SliverFillRemaining(
                   child: Center(
@@ -212,32 +276,27 @@ class HomeScreen extends ConsumerWidget {
               return SliverPadding(
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      // Gunakan list 'learningTopics' yang sudah steril
-                      final topic = learningTopics[index];
-                      return _TopicCard(
-                        index: index,
-                        orderIndex: topic.orderIndex,
-                        title: topic.title,
-                        description: topic.description ?? "",
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MaterialDetailScreen(
-                              topicId: topic.id,
-                              topicTitle: topic.title,
-                            ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final topic = learningTopics[index];
+                    return _TopicCard(
+                      index: index,
+                      orderIndex: topic.orderIndex,
+                      title: topic.title,
+                      description: topic.description ?? "",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MaterialDetailScreen(
+                            topicId: topic.id,
+                            topicTitle: topic.title,
                           ),
                         ),
-                      );
-                    },
-                    childCount: learningTopics.length, // Sesuaikan jumlahnya
-                  ),
+                      ),
+                    );
+                  }, childCount: learningTopics.length),
                 ),
               );
             },
-            // -------------------------------------------------------------
             loading: () => const SliverFillRemaining(
               child: Center(
                 child: CircularProgressIndicator(
@@ -263,7 +322,9 @@ class HomeScreen extends ConsumerWidget {
         title: const Text(
           "Keluar dari Akun?",
           style: TextStyle(
-              fontWeight: FontWeight.w800, color: Color(0xFF0F2D6B)),
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F2D6B),
+          ),
         ),
         content: Text(
           "Kamu akan keluar dari sesi belajarmu sekarang.",
@@ -272,21 +333,23 @@ class HomeScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Batal",
-                style: TextStyle(color: Color(0xFF4B8EFF))),
+            child: const Text(
+              "Batal",
+              style: TextStyle(color: Color(0xFF4B8EFF)),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1A5FD4),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               Navigator.pop(ctx);
               ref.read(authProvider.notifier).logout();
             },
-            child: const Text("Keluar",
-                style: TextStyle(color: Colors.white)),
+            child: const Text("Keluar", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -294,7 +357,85 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-// ── Assignment Banner ────────────────────────────────────────────────────────
+// ── CUSTOM CLIPPER (Bentuk Cekung) ───────────────────────────────────────────
+class HeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(0, size.height - 40); // Mulai dari kiri bawah sebelum curve
+
+    // Membuat lengkungan cekung ke dalam
+    var controlPoint = Offset(size.width / 2, size.height);
+    var endPoint = Offset(size.width, size.height - 40);
+
+    path.quadraticBezierTo(
+      controlPoint.dx,
+      controlPoint.dy,
+      endPoint.dx,
+      endPoint.dy,
+    );
+
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+// ── WAVE PAINTER (Animasi Ombak) ─────────────────────────────────────────────
+class WavePainter extends CustomPainter {
+  final double waveAnimation;
+  final Color color;
+  final bool isReversed;
+
+  WavePainter({
+    required this.waveAnimation,
+    required this.color,
+    this.isReversed = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path();
+
+    final double waveHeight = 15.0;
+    final double waveLength = size.width;
+
+    path.moveTo(0, size.height);
+
+    for (double i = 0; i <= size.width; i++) {
+      double x = i;
+      // Menghitung gelombang sinus
+      double animationValue = isReversed ? -waveAnimation : waveAnimation;
+      double y =
+          size.height -
+          60 +
+          math.sin(
+                (i / waveLength * 2 * math.pi) + (animationValue * 2 * math.pi),
+              ) *
+              waveHeight;
+      path.lineTo(x, y);
+    }
+
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant WavePainter oldDelegate) {
+    return oldDelegate.waveAnimation != waveAnimation;
+  }
+}
+
+// ── Sisanya (Banner, TopicCard, dll) sama seperti kode awal kamu ─────────────
+// (Salin kembali kelas _AssignmentBanner, _LevelMapBanner, _TopicCard, dan _ErrorState dari kode aslimu di sini)
+
 class _AssignmentBanner extends StatelessWidget {
   final VoidCallback onTap;
   const _AssignmentBanner({required this.onTap});
@@ -329,8 +470,11 @@ class _AssignmentBanner extends StatelessWidget {
                 color: Colors.white.withOpacity(0.20),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.quiz_rounded,
-                  color: Colors.white, size: 28),
+              child: const Icon(
+                Icons.quiz_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -357,8 +501,7 @@ class _AssignmentBanner extends StatelessWidget {
               ),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -379,7 +522,6 @@ class _AssignmentBanner extends StatelessWidget {
   }
 }
 
-// ── Level Map Banner (Pintu Menuju Peta Zig-Zag) ─────────────────────────
 class _LevelMapBanner extends StatelessWidget {
   final VoidCallback onTap;
   const _LevelMapBanner({required this.onTap});
@@ -393,7 +535,6 @@ class _LevelMapBanner extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            // Warna toska/cyan agar berbeda dengan banner tugas
             colors: [Color(0xFF34B3F1), Color(0xFF1A90A8)],
           ),
           borderRadius: BorderRadius.circular(20),
@@ -467,7 +608,6 @@ class _LevelMapBanner extends StatelessWidget {
   }
 }
 
-// ── Topic Card ───────────────────────────────────────────────────────────────
 class _TopicCard extends StatefulWidget {
   final int index;
   final int orderIndex;
@@ -489,8 +629,6 @@ class _TopicCard extends StatefulWidget {
 
 class _TopicCardState extends State<_TopicCard> {
   bool _pressed = false;
-
-  // Cycle through subtle blue shades for variety
   static const List<List<Color>> _iconGradients = [
     [Color(0xFF4B8EFF), Color(0xFF1A5FD4)],
     [Color(0xFF34B3F1), Color(0xFF1A7FC4)],
@@ -500,9 +638,7 @@ class _TopicCardState extends State<_TopicCard> {
 
   @override
   Widget build(BuildContext context) {
-    final gradient =
-        _iconGradients[widget.index % _iconGradients.length];
-
+    final gradient = _iconGradients[widget.index % _iconGradients.length];
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -527,11 +663,9 @@ class _TopicCardState extends State<_TopicCard> {
             ],
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                // Order badge
                 Container(
                   width: 48,
                   height: 48,
@@ -555,8 +689,6 @@ class _TopicCardState extends State<_TopicCard> {
                   ),
                 ),
                 const SizedBox(width: 14),
-
-                // Title & description
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,8 +718,6 @@ class _TopicCardState extends State<_TopicCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Arrow
                 Container(
                   width: 32,
                   height: 32,
@@ -610,7 +740,6 @@ class _TopicCardState extends State<_TopicCard> {
   }
 }
 
-// ── Error State ──────────────────────────────────────────────────────────────
 class _ErrorState extends StatelessWidget {
   final String message;
   const _ErrorState({required this.message});
@@ -630,8 +759,11 @@ class _ErrorState extends StatelessWidget {
                 color: const Color(0xFFFFEBEE),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Icons.cloud_off_rounded,
-                  color: Color(0xFFE53935), size: 36),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                color: Color(0xFFE53935),
+                size: 36,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(

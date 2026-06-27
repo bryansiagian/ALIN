@@ -5,6 +5,7 @@ import 'package:flutter_math/features/learning/provider/learning_provider.dart';
 import 'package:flutter_math/features/learning/widget/latex_renderer.dart';
 import 'package:flutter_math/features/learning/screen/pdf_view_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
 
 class MaterialDetailScreen extends ConsumerStatefulWidget {
   final int topicId;
@@ -25,20 +26,21 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _headerController;
+  late AnimationController _waveController; // Controller baru untuk ombak
   late Animation<double> _headerAnimation;
   final ScrollController _scrollController = ScrollController();
   bool _isCollapsed = false;
 
-  // Design system - konsisten dengan screen lain
+  // Design system diperbarui untuk kesan Classic Aesthetic
   static const Color _primaryDark = Color(0xFF0D2B6B);
   static const Color _primaryMid = Color(0xFF1A56DB);
   static const Color _primaryLight = Color(0xFF3B82F6);
-  static const Color _bgPage = Color(0xFFF0F4FF);
+  static const Color _bgPage = Color(0xFFF8FAFC); // Lebih bersih
   static const Color _cardBg = Colors.white;
-  static const Color _textPrimary = Color(0xFF0F172A);
-  static const Color _textSecondary = Color(0xFF475569);
-  static const Color _pdfRed = Color(0xFFEF4444);
-  static const Color _formulaGreen = Color(0xFF10B981);
+  static const Color _textPrimary = Color(0xFF1E293B);
+  static const Color _textSecondary = Color(0xFF64748B);
+  static const Color _pdfRed = Color(0xFFE11D48);
+  static const Color _formulaGreen = Color(0xFF059669);
   static const Color _textBlue = Color(0xFF2563EB);
 
   @override
@@ -46,20 +48,27 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 800),
     )..forward();
 
     _headerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+
+    // Inisialisasi controller ombak
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+
     _headerAnimation = CurvedAnimation(
       parent: _headerController,
       curve: Curves.easeOut,
     );
 
     _scrollController.addListener(() {
-      final collapsed = _scrollController.offset > 100;
+      final collapsed = _scrollController.offset > 120;
       if (collapsed != _isCollapsed) {
         setState(() => _isCollapsed = collapsed);
       }
@@ -70,6 +79,7 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
   void dispose() {
     _fadeController.dispose();
     _headerController.dispose();
+    _waveController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -131,42 +141,40 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
           SliverFillRemaining(child: _buildEmptyState())
         else
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final delay = index * 80;
-                  return FadeTransition(
-                    opacity: Tween<double>(begin: 0, end: 1).animate(
-                      CurvedAnimation(
-                        parent: _fadeController,
-                        curve: Interval(
-                          (delay / 800).clamp(0.0, 1.0),
-                          ((delay + 300) / 800).clamp(0.0, 1.0),
-                          curve: Curves.easeOut,
-                        ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final delay = index * 100;
+                return FadeTransition(
+                  opacity: Tween<double>(begin: 0, end: 1).animate(
+                    CurvedAnimation(
+                      parent: _fadeController,
+                      curve: Interval(
+                        (delay / 1000).clamp(0.0, 1.0),
+                        1.0,
+                        curve: Curves.easeOut,
                       ),
                     ),
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.2),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: _fadeController,
-                          curve: Interval(
-                            (delay / 800).clamp(0.0, 1.0),
-                            ((delay + 300) / 800).clamp(0.0, 1.0),
-                            curve: Curves.easeOut,
+                  ),
+                  child: SlideTransition(
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, 0.1),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: _fadeController,
+                            curve: Interval(
+                              (delay / 1000).clamp(0.0, 1.0),
+                              1.0,
+                              curve: Curves.easeOut,
+                            ),
                           ),
                         ),
-                      ),
-                      child: _buildMaterialCard(context, materials[index], index),
-                    ),
-                  );
-                },
-                childCount: materials.length,
-              ),
+                    child: _buildMaterialCard(context, materials[index], index),
+                  ),
+                );
+              }, childCount: materials.length),
             ),
           ),
       ],
@@ -179,388 +187,380 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
     final int formulaCount = materials
         .where((m) => m.contentType == 'formula')
         .length;
-    final int textCount = totalMaterials - pdfCount - formulaCount;
 
     return SliverAppBar(
-      expandedHeight:
-          200, // 1. Tingkatkan dari 180 ke 200 agar lebih lega untuk judul panjang
+      expandedHeight: 240,
       pinned: true,
       stretch: true,
+      elevation: 0,
       backgroundColor: _primaryDark,
-      leading: Padding(
-        padding: const EdgeInsets.all(8),
-        child: GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            Navigator.pop(context);
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
-          ),
-        ),
-      ),
+      leading: _buildAppBarLeading(context),
       flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.parallax,
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_primaryDark, _primaryMid, _primaryLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        stretchModes: const [
+          StretchMode.zoomBackground,
+          StretchMode.blurBackground,
+        ],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Background Gradient
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_primaryDark, _primaryMid],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
             ),
-          ),
-          // 2. CABUT WIDGET 'SafeArea' dan atur padding atas secara rasional (60)
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 60, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Breadcrumb
-                Row(
+
+            // Animasi Ombak Laut
+            AnimatedBuilder(
+              animation: _waveController,
+              builder: (context, child) {
+                return Stack(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.menu_book_rounded,
-                            color: Colors.white70,
-                            size: 12,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            "Materi",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
+                    _buildWave(
+                      0.4,
+                      0.6,
+                      _waveController.value,
+                      Colors.white.withOpacity(0.1),
+                    ),
+                    _buildWave(
+                      0.5,
+                      0.4,
+                      _waveController.value + 0.5,
+                      Colors.white.withOpacity(0.15),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.topicTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    height: 1.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  // Menghilangkan LaTeX dari regular prose
-                ),
-                const SizedBox(height: 12),
-                // Stats pills
-                if (totalMaterials > 0)
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _statPill(
-                          Icons.layers_rounded,
-                          "$totalMaterials Materi",
-                          Colors.white,
+                );
+              },
+            ),
+
+            // Konten Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderBreadcrumb(),
+                  const SizedBox(height: 12),
+                  Text(
+                    widget.topicTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 2),
                         ),
-                        if (pdfCount > 0) ...[
-                          const SizedBox(width: 8),
-                          _statPill(
-                            Icons.picture_as_pdf_rounded,
-                            "$pdfCount PDF",
-                            const Color(0xFFFFB3B3),
-                          ),
-                        ],
-                        if (formulaCount > 0) ...[
-                          const SizedBox(width: 8),
-                          _statPill(
-                            Icons.functions_rounded,
-                            "$formulaCount Formula",
-                            const Color(0xFFB3F0D8),
-                          ),
-                        ],
-                        if (textCount > 0) ...[
-                          const SizedBox(width: 8),
-                          _statPill(
-                            Icons.text_snippet_rounded,
-                            "$textCount Teks",
-                            const Color(0xFFBFD7FF),
-                          ),
-                        ],
                       ],
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-              ],
+                  const SizedBox(height: 16),
+                  _buildStatsRow(totalMaterials, pdfCount, formulaCount),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
         title: _isCollapsed
             ? Text(
                 widget.topicTitle,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               )
             : null,
+        centerTitle: true,
+      ),
+    );
+  }
+
+  Widget _buildWave(
+    double heightFactor,
+    double speed,
+    double offset,
+    Color color,
+  ) {
+    return Positioned.fill(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(
+          height: 100,
+          child: CustomPaint(
+            painter: WavePainter(waveAnimation: offset, color: color),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBarLeading(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          Navigator.pop(context);
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(_isCollapsed ? 0 : 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderBreadcrumb() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_stories, color: Colors.white, size: 14),
+          SizedBox(width: 6),
+          Text(
+            "Learning Material",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(int total, int pdf, int formula) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _statPill(
+            Icons.collections_bookmark_rounded,
+            "$total Materi",
+            Colors.white,
+          ),
+          if (pdf > 0) ...[
+            const SizedBox(width: 8),
+            _statPill(
+              Icons.picture_as_pdf_rounded,
+              "$pdf PDF",
+              Colors.red.shade100,
+            ),
+          ],
+          if (formula > 0) ...[
+            const SizedBox(width: 8),
+            _statPill(
+              Icons.functions_rounded,
+              "Formula",
+              Colors.green.shade100,
+            ),
+          ],
+        ],
       ),
     );
   }
 
   Widget _statPill(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 13),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-                color: color, fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ],
+    return ClipRRect(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  // --- MODIFIKASI CARD: CLASSIC AESTHETIC ---
   Widget _buildMaterialCard(BuildContext context, dynamic material, int index) {
     final bool isPdf = material.fileUrl != null;
     final bool isFormula = material.contentType == 'formula';
 
-    // Warna aksen per tipe konten
-    Color accentColor;
-    IconData typeIcon;
-    String typeLabel;
-    Color typeBg;
-
-    if (isPdf) {
-      accentColor = _pdfRed;
-      typeIcon = Icons.picture_as_pdf_rounded;
-      typeLabel = "PDF";
-      typeBg = const Color(0xFFFFF1F1);
-    } else if (isFormula) {
-      accentColor = _formulaGreen;
-      typeIcon = Icons.functions_rounded;
-      typeLabel = "Formula";
-      typeBg = const Color(0xFFF0FFF8);
-    } else {
-      accentColor = _textBlue;
-      typeIcon = Icons.text_snippet_rounded;
-      typeLabel = "Teks";
-      typeBg = const Color(0xFFF0F6FF);
-    }
+    Color accentColor = isPdf
+        ? _pdfRed
+        : (isFormula ? _formulaGreen : _textBlue);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: _cardBg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withOpacity(0.08),
+            color: const Color(0xFF0D2B6B).withOpacity(0.04),
             blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header card dengan accent kiri
-          Container(
-            decoration: BoxDecoration(
-              color: typeBg,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Row(
-              children: [
-                // Nomor urut
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [accentColor, accentColor.withOpacity(0.7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accentColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      "${index + 1}",
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        material.title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: _textPrimary,
-                          height: 1.3,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Type badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(typeIcon, color: accentColor, size: 11),
-                            const SizedBox(width: 4),
-                            Text(
-                              typeLabel,
-                              style: TextStyle(
-                                  color: accentColor,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Decorative Side Bar & Content Header
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 6, color: accentColor),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: accentColor.withOpacity(0.08),
+                              shape: BoxShape.circle,
                             ),
-                          ],
-                        ),
+                            child: Text(
+                              "${index + 1}",
+                              style: TextStyle(
+                                color: accentColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  material.title,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: _textPrimary,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isPdf
+                                      ? "Dokumen Referensi"
+                                      : (isFormula
+                                            ? "Rumus Matematika"
+                                            : "Materi Tekstual"),
+                                  style: TextStyle(
+                                    color: accentColor.withOpacity(0.7),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Divider gradasi
-          Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  accentColor.withOpacity(0.3),
-                  accentColor.withOpacity(0.05),
-                  Colors.transparent,
                 ],
               ),
             ),
-          ),
 
-          // Konten body
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: isPdf
-                ? _buildPdfContent(context, material)
-                : isFormula
-                    ? _buildFormulaContent(material)
-                    : _buildTextContent(material),
-          ),
-        ],
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Divider(height: 1, thickness: 0.5),
+            ),
+
+            // Konten body
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: isPdf
+                  ? _buildPdfContent(context, material)
+                  : isFormula
+                  ? _buildFormulaContent(material)
+                  : _buildTextContent(material),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPdfContent(BuildContext context, dynamic material) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Preview info
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF8F8),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _pdfRed.withOpacity(0.15)),
+            color: _pdfRed.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _pdfRed.withOpacity(0.1)),
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: _pdfRed.withOpacity(0.7),
-                size: 14,
-              ),
-              const SizedBox(width: 8),
-
-              // --- SUNTIKKAN EXPANDED DI SINI AGAR TEKS OTOMATIS ME-WRAP ---
+              const Icon(Icons.description_outlined, color: _pdfRed, size: 20),
+              const SizedBox(width: 12),
               Expanded(
-                child: const Text(
-                  "Dokumen PDF tersedia untuk dibaca atau diunduh",
+                child: Text(
+                  "File PDF siap dipelajari secara offline maupun online.",
                   style: TextStyle(
-                    color: _textSecondary,
+                    color: _textSecondary.withOpacity(0.8),
                     fontSize: 12,
                     height: 1.4,
                   ),
                 ),
               ),
-              // -------------------------------------------------------------
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        // Tombol aksi
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               flex: 3,
-              child: _buildGradientButton(
-                label: "Baca PDF",
-                icon: Icons.menu_book_rounded,
-                gradient: const LinearGradient(
-                  colors: [_primaryDark, _primaryMid],
-                ),
-                shadowColor: _primaryMid,
+              child: _buildClassicButton(
+                label: "Buka Materi",
+                icon: Icons.auto_stories_rounded,
+                color: _primaryMid,
                 onTap: () {
                   HapticFeedback.lightImpact();
                   Navigator.push(
@@ -575,13 +575,14 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
                 },
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               flex: 2,
-              child: _buildOutlineButton(
-                label: "Unduh",
-                icon: Icons.download_rounded,
+              child: _buildClassicButton(
+                label: "Simpan",
+                icon: Icons.download_for_offline_rounded,
                 color: _pdfRed,
+                isOutline: true,
                 onTap: () => _downloadPDF(context, material.fileUrl!),
               ),
             ),
@@ -592,133 +593,78 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
   }
 
   Widget _buildFormulaContent(dynamic material) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                _formulaGreen.withOpacity(0.08),
-                _primaryLight.withOpacity(0.06),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _formulaGreen.withOpacity(0.2)),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.functions_rounded,
+            color: _formulaGreen.withOpacity(0.4),
+            size: 20,
           ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.functions_rounded,
-                      color: _formulaGreen.withOpacity(0.6), size: 14),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Formula LaTeX",
-                    style: TextStyle(
-                        color: _formulaGreen.withOpacity(0.8),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: LatexRenderer(
-                  latex: material.content ?? "",
-                  fontSize: 22,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          LatexRenderer(latex: material.content ?? "", fontSize: 22),
+        ],
+      ),
     );
   }
 
   Widget _buildTextContent(dynamic material) {
-    final String content = material.content ?? "Tidak ada isi materi.";
     return Text(
-      content,
+      material.content ?? "Tidak ada isi materi.",
       style: const TextStyle(
         fontSize: 15,
         color: _textPrimary,
-        height: 1.65,
-        letterSpacing: 0.1,
+        height: 1.7,
+        letterSpacing: 0.2,
       ),
     );
   }
 
-  Widget _buildGradientButton({
-    required String label,
-    required IconData icon,
-    required Gradient gradient,
-    required Color shadowColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: 44,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: shadowColor.withOpacity(0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOutlineButton({
+  Widget _buildClassicButton({
     required String label,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    bool isOutline = false,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        height: 44,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 48,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.4), width: 1.5),
+          color: isOutline ? Colors.transparent : color,
+          borderRadius: BorderRadius.circular(14),
+          border: isOutline ? Border.all(color: color, width: 1.5) : null,
+          boxShadow: isOutline
+              ? null
+              : [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 17),
-            const SizedBox(width: 6),
+            Icon(icon, color: isOutline ? color : Colors.white, size: 18),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                  color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                color: isOutline ? color : Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -726,210 +672,82 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
     );
   }
 
-  // ── State Screens ────────────────────────────────────────────────────────
+  // --- STATE SCREENS ---
 
   Widget _buildLoadingState() {
-    return Scaffold(
-      backgroundColor: _bgPage,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: _primaryDark,
-            leading: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 18),
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [_primaryDark, _primaryMid, _primaryLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-              ),
-            ),
-            expandedHeight: 180,
-          ),
-          SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [_primaryMid, _primaryLight],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _primaryMid.withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Memuat materi...",
-                    style: TextStyle(
-                        color: _textSecondary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
+    return Center(child: CircularProgressIndicator(color: _primaryMid));
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            "Belum ada materi tersedia",
+            style: TextStyle(color: _textSecondary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildErrorState(BuildContext context, Object err) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _primaryLight.withOpacity(0.2),
-                    _primaryMid.withOpacity(0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(Icons.library_books_outlined,
-                  color: _primaryLight.withOpacity(0.6), size: 40),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              "Belum Ada Materi",
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: _textPrimary),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Materi untuk topik ini belum tersedia.\nCek kembali nanti.",
-              textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 14, color: _textSecondary, height: 1.5),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: _pdfRed),
+          const SizedBox(height: 16),
+          Text(
+            "Terjadi kesalahan sistem",
+            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+          _buildClassicButton(
+            label: "Coba Lagi",
+            icon: Icons.refresh,
+            color: _primaryMid,
+            onTap: () => ref.invalidate(materialsProvider(widget.topicId)),
+          ),
+        ],
       ),
     );
+  }
+}
+
+// PAINTER UNTUK ANIMASI OMBAK
+class WavePainter extends CustomPainter {
+  final double waveAnimation;
+  final Color color;
+
+  WavePainter({required this.waveAnimation, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path();
+
+    path.moveTo(0, size.height);
+    for (double i = 0; i <= size.width; i++) {
+      path.lineTo(
+        i,
+        size.height * 0.5 +
+            math.sin(
+                  (i / size.width * 2 * math.pi) +
+                      (waveAnimation * 2 * math.pi),
+                ) *
+                15,
+      );
+    }
+    path.lineTo(size.width, size.height);
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
-  Widget _buildErrorState(BuildContext context, Object err) {
-    return Scaffold(
-      backgroundColor: _bgPage,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _pdfRed.withOpacity(0.15),
-                      _pdfRed.withOpacity(0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Icon(Icons.wifi_off_rounded,
-                    color: _pdfRed.withOpacity(0.7), size: 40),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Gagal Memuat Materi",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _textPrimary),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                err.toString(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 13, color: _textSecondary, height: 1.5),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  ref.invalidate(materialsProvider(widget.topicId));
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 28, vertical: 13),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_primaryDark, _primaryMid],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _primaryMid.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.refresh_rounded,
-                          color: Colors.white, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        "Coba Lagi",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  @override
+  bool shouldRepaint(covariant WavePainter oldDelegate) =>
+      oldDelegate.waveAnimation != waveAnimation;
 }

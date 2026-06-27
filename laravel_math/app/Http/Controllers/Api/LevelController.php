@@ -15,7 +15,7 @@ class LevelController extends Controller
     {
         $user = $request->user();
 
-        // 1. Validasi batas level agar mahasiswa tidak bisa melompati level yang masih terkunci
+        // 1. Validasi batas level
         $placement = DB::table('placement_results')->where('user_id', $user->id)->first();
         $maxUnlocked = $placement ? $placement->unlocked_level : 1;
 
@@ -23,14 +23,13 @@ class LevelController extends Controller
             return response()->json(['message' => 'Level ini masih terkunci untuk Anda!'], 403);
         }
 
-        // --- PERUBAHAN DI SINI: UBAH PEMBAGI MENJADI 100 ---
+        // 2. Kalkulasi index topik
         $topicOrderIndex = ceil($level / 100);
-        // ---------------------------------------------------
 
-        // 3. Cari ID asli Topik di database berdasarkan urutannya (order_index)
+        // 3. Cari ID asli Topik
         $topic = DB::table('topics')
             ->where('is_active', true)
-            ->where('id', '!=', 6) // Mengecualikan ID 6 (Topik khusus Placement Test)
+            ->where('id', '!=', 6)
             ->orderBy('order_index', 'asc')
             ->skip($topicOrderIndex - 1)
             ->first();
@@ -39,9 +38,11 @@ class LevelController extends Controller
             return response()->json(['message' => 'Materi untuk level ini belum tersedia.'], 404);
         }
 
-        // 4. Ambil 5 soal secara acak dari bank soal sesuai dengan ID Topik tersebut
+        // 4. Ambil 5 soal secara acak (DITAMBAHKAN FILTER is_quiz = false)
         $questions = DB::table('question_banks')
             ->where('topic_id', $topic->id)
+            ->where('is_quiz', false)
+            ->where('is_placement', false) // <--- TAMBAHKAN INI
             ->inRandomOrder()
             ->limit(5)
             ->get();

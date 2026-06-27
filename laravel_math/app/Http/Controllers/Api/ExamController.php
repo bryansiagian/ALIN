@@ -37,15 +37,14 @@ class ExamController extends Controller
             $user       = $request->user();
             $assignment = Assignment::with('questions')->findOrFail($assignmentId);
 
-            // --- GERBANG 1: VALIDASI PASSWORD KUIS (NEW FEATURE) ---
+            // --- GERBANG 1: VALIDASI PASSWORD KUIS ---
             if (!empty($assignment->password)) {
                 if (!$request->has('password') || $request->password !== $assignment->password) {
                     return response()->json([
                         'message' => 'Akses ditolak: Password kuis wajib diisi atau tidak cocok!'
-                    ], 401); // Kirim status 401 Unauthorized
+                    ], 401);
                 }
             }
-            // -------------------------------------------------------
 
             $sekarang = now();
 
@@ -61,13 +60,23 @@ class ExamController extends Controller
                 ], 403);
             }
 
-            // --- LOGIKA PEMBELAJARAN ADAPTIF ---
+            // --- LOGIKA PEMBELAJARAN ADAPTIF (DIPERBAIKI) ---
             $placement = \App\Models\PlacementResult::where('user_id', $user->id)->first();
             $tier = $placement ? \App\Http\Controllers\Api\PlacementController::getAdaptiveDifficulty($placement->grade) : 'easy';
-            $adaptiveQuestions = $assignment->questions()->where('difficulty', $tier)->inRandomOrder()->get();
+
+            // Menambahkan filter where('topic_id', '!=', 6) agar soal placement tidak bocor ke kuis
+            $adaptiveQuestions = $assignment->questions()
+                ->where('topic_id', '!=', 6)
+                ->where('is_placement', false)
+                ->where('difficulty', $tier)
+                ->inRandomOrder()
+                ->get();
 
             if ($adaptiveQuestions->isEmpty()) {
-                $adaptiveQuestions = $assignment->questions;
+                // Jika tidak ada soal dengan tier tsb, ambil semua soal (kecuali soal placement)
+                $adaptiveQuestions = $assignment->questions()
+                    ->where('topic_id', '!=', 6)
+                    ->get();
             }
 
             $activeSession = ExamSession::where('assignment_id', $assignmentId)

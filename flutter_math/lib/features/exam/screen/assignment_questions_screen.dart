@@ -4,19 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math/features/exam/service/lecturer_service.dart';
 import 'package:flutter_math/core/api/api_client.dart';
 
-// ─────────────────────────────────────────────
-//  Design Tokens
-// ─────────────────────────────────────────────
 const _kBlue900 = Color(0xFF0D2B6B);
 const _kBlue700 = Color(0xFF1A56DB);
 const _kBlue500 = Color(0xFF3B82F6);
 const _kBlue200 = Color(0xFFBFDBFE);
-const _kBlue50  = Color(0xFFEFF6FF);
+const _kBlue50 = Color(0xFFEFF6FF);
 const _kSurface = Color(0xFFF8FAFF);
 
-// ─────────────────────────────────────────────
-//  Main Screen
-// ─────────────────────────────────────────────
 class AssignmentQuestionsScreen extends ConsumerStatefulWidget {
   final int assignmentId;
   final String title;
@@ -28,10 +22,12 @@ class AssignmentQuestionsScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AssignmentQuestionsScreen> createState() => _AssignmentQuestionsScreenState();
+  ConsumerState<AssignmentQuestionsScreen> createState() =>
+      _AssignmentQuestionsScreenState();
 }
 
-class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsScreen>
+class _AssignmentQuestionsScreenState
+    extends ConsumerState<AssignmentQuestionsScreen>
     with SingleTickerProviderStateMixin {
   late Future<List> _future;
   late AnimationController _fadeCtrl;
@@ -40,7 +36,10 @@ class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsS
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _load();
   }
@@ -70,7 +69,8 @@ class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsS
               physics: const BouncingScrollPhysics(),
               slivers: [
                 _buildSliverAppBar(snapshot),
-                if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting)
+                if (!snapshot.hasData &&
+                    snapshot.connectionState == ConnectionState.waiting)
                   const SliverFillRemaining(child: _LoadingState())
                 else if (snapshot.hasError)
                   SliverFillRemaining(
@@ -93,7 +93,6 @@ class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsS
 
   SliverAppBar _buildSliverAppBar(AsyncSnapshot snapshot) {
     final count = snapshot.data?.length ?? 0;
-
     return SliverAppBar(
       expandedHeight: 170,
       pinned: true,
@@ -106,7 +105,11 @@ class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsS
             color: Colors.white.withOpacity(0.18),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 16,
+          ),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -118,7 +121,11 @@ class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsS
               color: Colors.white.withOpacity(0.18),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.refresh_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
           onPressed: () => setState(_load),
         ),
@@ -135,35 +142,35 @@ class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsS
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            return FadeTransition(
-              opacity: _fadeAnim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: Offset(0, 0.06 + index * 0.03),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: _fadeCtrl,
-                  curve: Interval(
-                    (index * 0.07).clamp(0.0, 0.8),
-                    1.0,
-                    curve: Curves.easeOut,
+        delegate: SliverChildBuilderDelegate((context, index) {
+          return FadeTransition(
+            opacity: _fadeAnim,
+            child: SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: Offset(0, 0.06 + index * 0.03),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _fadeCtrl,
+                      curve: Interval(
+                        (index * 0.07).clamp(0.0, 0.8),
+                        1.0,
+                        curve: Curves.easeOut,
+                      ),
+                    ),
                   ),
-                )),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _QuestionCard(
-                    question: questions[index],
-                    index: index,
-                    onEdit: () => _showEditSheet(context, ref, questions[index]),
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _QuestionCard(
+                  question: questions[index],
+                  index: index,
+                  onEdit: () => _showEditSheet(context, ref, questions[index]),
                 ),
               ),
-            );
-          },
-          childCount: questions.length,
-        ),
+            ),
+          );
+        }, childCount: questions.length),
       ),
     );
   }
@@ -181,17 +188,26 @@ class _AssignmentQuestionsScreenState extends ConsumerState<AssignmentQuestionsS
             'correct_answer': newKey,
           });
           if (context.mounted) {
-            setState(_load); // Reload list
+            setState(_load);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: const Color(0xFF1A1A2E),
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 content: const Row(
                   children: [
-                    Icon(Icons.check_circle_outline_rounded, color: Color(0xFF6EE7B7), size: 18),
+                    Icon(
+                      Icons.check_circle_outline_rounded,
+                      color: Color(0xFF6EE7B7),
+                      size: 18,
+                    ),
                     SizedBox(width: 10),
-                    Text("Soal berhasil diperbarui!", style: TextStyle(color: Colors.white)),
+                    Text(
+                      "Soal berhasil diperbarui!",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ],
                 ),
               ),
@@ -236,7 +252,11 @@ class _AppBarBackground extends StatelessWidget {
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.list_alt_rounded, color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.list_alt_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -256,7 +276,10 @@ class _AppBarBackground extends StatelessWidget {
                         ),
                         const Text(
                           "Bank Soal",
-                          style: TextStyle(color: Color(0xFFBFDBFE), fontSize: 12),
+                          style: TextStyle(
+                            color: Color(0xFFBFDBFE),
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -266,7 +289,10 @@ class _AppBarBackground extends StatelessWidget {
               const SizedBox(height: 14),
               if (count > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -275,7 +301,11 @@ class _AppBarBackground extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.quiz_outlined, color: Color(0xFFBFDBFE), size: 13),
+                      const Icon(
+                        Icons.quiz_outlined,
+                        color: Color(0xFFBFDBFE),
+                        size: 13,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         "$count Soal",
@@ -300,7 +330,11 @@ class _AppBarBackground extends StatelessWidget {
 //  Question Card
 // ─────────────────────────────────────────────
 class _QuestionCard extends StatefulWidget {
-  const _QuestionCard({required this.question, required this.index, required this.onEdit});
+  const _QuestionCard({
+    required this.question,
+    required this.index,
+    required this.onEdit,
+  });
   final Map question;
   final int index;
   final VoidCallback onEdit;
@@ -313,16 +347,22 @@ class _QuestionCardState extends State<_QuestionCard> {
   bool _expanded = false;
 
   static const _optionColors = [
-    Color(0xFFEFF6FF), Color(0xFFF0FDF4),
-    Color(0xFFFFFBEB), Color(0xFFFFF1F2),
+    Color(0xFFEFF6FF),
+    Color(0xFFF0FDF4),
+    Color(0xFFFFFBEB),
+    Color(0xFFFFF1F2),
   ];
   static const _optionBorderColors = [
-    Color(0xFFBFDBFE), Color(0xFFBBF7D0),
-    Color(0xFFFDE68A), Color(0xFFFFCDD2),
+    Color(0xFFBFDBFE),
+    Color(0xFFBBF7D0),
+    Color(0xFFFDE68A),
+    Color(0xFFFFCDD2),
   ];
   static const _optionLabelColors = [
-    _kBlue700, Color(0xFF16A34A),
-    Color(0xFFD97706), Color(0xFFE53935),
+    _kBlue700,
+    Color(0xFF16A34A),
+    Color(0xFFD97706),
+    Color(0xFFE53935),
   ];
 
   @override
@@ -330,6 +370,7 @@ class _QuestionCardState extends State<_QuestionCard> {
     final q = widget.question;
     final options = q['options'] as List? ?? [];
     final correctAnswer = q['correct_answer'] as String? ?? '';
+    final questionImage = q['question_image'] as String?;
 
     return Container(
       decoration: BoxDecoration(
@@ -392,7 +433,9 @@ class _QuestionCardState extends State<_QuestionCard> {
                       Text(
                         q['question_text'] ?? '',
                         maxLines: _expanded ? null : 3,
-                        overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                        overflow: _expanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF1E293B),
@@ -430,70 +473,214 @@ class _QuestionCardState extends State<_QuestionCard> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: const Color(0xFFFDE68A)),
                     ),
-                    child: const Icon(Icons.edit_rounded, size: 16, color: Color(0xFFD97706)),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      size: 16,
+                      color: Color(0xFFD97706),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
+          // ── Gambar Soal ──
+          if (questionImage != null) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  questionImage,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: _kBlue50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _kBlue500,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: _kBlue50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _kBlue200),
+                    ),
+                    child: const Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.broken_image_rounded,
+                            color: _kBlue500,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            "Gambar tidak dapat dimuat",
+                            style: TextStyle(color: _kBlue500, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
           // ── Options ──
           if (options.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Divider(height: 1, indent: 18, endIndent: 18, color: Color(0xFFF1F5F9)),
+            const Divider(
+              height: 1,
+              indent: 18,
+              endIndent: 18,
+              color: Color(0xFFF1F5F9),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
               child: Column(
                 children: List.generate(options.length, (i) {
-                  final opt = options[i];
+                  final opt = options[i] as Map;
                   final key = opt['key'] as String? ?? '';
+                  final text = opt['text'] as String? ?? '';
+                  final image = opt['image'] as String?;
                   final isCorrect = key == correctAnswer;
                   final colorIdx = i % 4;
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
-                      color: isCorrect ? const Color(0xFFF0FDF4) : _optionColors[colorIdx],
+                      color: isCorrect
+                          ? const Color(0xFFF0FDF4)
+                          : _optionColors[colorIdx],
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isCorrect ? const Color(0xFF86EFAC) : _optionBorderColors[colorIdx],
+                        color: isCorrect
+                            ? const Color(0xFF86EFAC)
+                            : _optionBorderColors[colorIdx],
                         width: isCorrect ? 1.5 : 1.0,
                       ),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: isCorrect ? const Color(0xFF16A34A) : _optionLabelColors[colorIdx].withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                        // Baris label + teks
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Label A/B/C/D
+                              Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: isCorrect
+                                      ? const Color(0xFF16A34A)
+                                      : _optionLabelColors[colorIdx]
+                                            .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    key,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: isCorrect
+                                          ? Colors.white
+                                          : _optionLabelColors[colorIdx],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Teks opsi
+                              Expanded(
+                                child: text.isNotEmpty
+                                    ? Text(
+                                        text,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isCorrect
+                                              ? const Color(0xFF15803D)
+                                              : const Color(0xFF334155),
+                                          fontWeight: isCorrect
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
+                                      )
+                                    : const SizedBox(),
+                              ),
+                              if (isCorrect)
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Color(0xFF16A34A),
+                                  size: 18,
+                                ),
+                            ],
                           ),
-                          child: Center(
-                            child: Text(
-                              key,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: isCorrect ? Colors.white : _optionLabelColors[colorIdx],
+                        ),
+
+                        // ── Gambar opsi ──
+                        if (image != null) ...[
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                image,
+                                width: double.infinity,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return Container(
+                                    height: 100,
+                                    color: Colors.white.withOpacity(0.5),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: _kBlue500,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (_, __, ___) => Container(
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.broken_image_rounded,
+                                      color: _kBlue500,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            opt['text'] ?? '',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isCorrect ? const Color(0xFF15803D) : const Color(0xFF334155),
-                              fontWeight: isCorrect ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                        if (isCorrect)
-                          const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                        ] else
+                          const SizedBox(height: 10),
                       ],
                     ),
                   );
@@ -514,7 +701,11 @@ class _QuestionCardState extends State<_QuestionCard> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.key_rounded, size: 14, color: Color(0xFF16A34A)),
+                const Icon(
+                  Icons.key_rounded,
+                  size: 14,
+                  color: Color(0xFF16A34A),
+                ),
                 const SizedBox(width: 6),
                 const Text(
                   "Kunci Jawaban: ",
@@ -557,7 +748,9 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.question['question_text'] ?? '');
+    _controller = TextEditingController(
+      text: widget.question['question_text'] ?? '',
+    );
     _selectedKey = widget.question['correct_answer'] ?? 'A';
   }
 
@@ -581,7 +774,6 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle bar
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12, bottom: 20),
@@ -593,17 +785,21 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
               ),
             ),
           ),
-
-          // Title
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_kBlue700, _kBlue500]),
+                  gradient: const LinearGradient(
+                    colors: [_kBlue700, _kBlue500],
+                  ),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.edit_rounded, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.edit_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -616,13 +812,14 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
-          // Question Text Field
           const Text(
             "Teks Soal",
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
           ),
           const SizedBox(height: 8),
           Container(
@@ -634,7 +831,11 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
             child: TextField(
               controller: _controller,
               maxLines: 4,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B), height: 1.55),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF1E293B),
+                height: 1.55,
+              ),
               decoration: const InputDecoration(
                 hintText: "Tulis teks soal di sini...",
                 hintStyle: TextStyle(color: Color(0xFFCBD5E1)),
@@ -643,13 +844,14 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
               ),
             ),
           ),
-
           const SizedBox(height: 18),
-
-          // Correct Answer Selector
           const Text(
             "Kunci Jawaban",
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -673,7 +875,13 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                         width: 1.5,
                       ),
                       boxShadow: selected
-                          ? [BoxShadow(color: _kBlue500.withOpacity(0.30), blurRadius: 8, offset: const Offset(0, 3))]
+                          ? [
+                              BoxShadow(
+                                color: _kBlue500.withOpacity(0.30),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
                           : null,
                     ),
                     child: Center(
@@ -691,10 +899,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
               );
             }).toList(),
           ),
-
           const SizedBox(height: 24),
-
-          // Action Buttons
           Row(
             children: [
               Expanded(
@@ -729,7 +934,10 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                           if (_controller.text.trim().isEmpty) return;
                           setState(() => _isSaving = true);
                           try {
-                            await widget.onSave(_controller.text.trim(), _selectedKey);
+                            await widget.onSave(
+                              _controller.text.trim(),
+                              _selectedKey,
+                            );
                             if (mounted) Navigator.pop(context);
                           } catch (_) {
                             if (mounted) setState(() => _isSaving = false);
@@ -741,28 +949,47 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                     decoration: BoxDecoration(
                       gradient: _isSaving
                           ? null
-                          : const LinearGradient(colors: [_kBlue700, _kBlue500]),
+                          : const LinearGradient(
+                              colors: [_kBlue700, _kBlue500],
+                            ),
                       color: _isSaving ? const Color(0xFFCBD5E1) : null,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: _isSaving
                           ? null
-                          : [BoxShadow(color: _kBlue500.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                          : [
+                              BoxShadow(
+                                color: _kBlue500.withOpacity(0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                     ),
                     child: Center(
                       child: _isSaving
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
                             )
                           : const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.save_rounded, color: Colors.white, size: 18),
+                                Icon(
+                                  Icons.save_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
                                 SizedBox(width: 8),
                                 Text(
                                   "Simpan Perubahan",
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                  ),
                                 ),
                               ],
                             ),
@@ -793,16 +1020,32 @@ class _LoadingState extends StatelessWidget {
           decoration: BoxDecoration(
             color: _kBlue50,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: _kBlue200.withOpacity(0.5), blurRadius: 20, spreadRadius: 5)],
+            boxShadow: [
+              BoxShadow(
+                color: _kBlue200.withOpacity(0.5),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
           ),
           child: const SizedBox(
             width: 36,
             height: 36,
-            child: CircularProgressIndicator(strokeWidth: 3, valueColor: AlwaysStoppedAnimation(_kBlue500)),
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation(_kBlue500),
+            ),
           ),
         ),
         const SizedBox(height: 20),
-        const Text("Memuat soal...", style: TextStyle(color: Color(0xFF64748B), fontSize: 15, fontWeight: FontWeight.w500)),
+        const Text(
+          "Memuat soal...",
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }
@@ -825,15 +1068,30 @@ class _EmptyState extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: _kBlue200, width: 2),
               ),
-              child: const Icon(Icons.inbox_rounded, size: 48, color: _kBlue500),
+              child: const Icon(
+                Icons.inbox_rounded,
+                size: 48,
+                color: _kBlue500,
+              ),
             ),
             const SizedBox(height: 20),
-            const Text("Belum Ada Soal", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+            const Text(
+              "Belum Ada Soal",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+            ),
             const SizedBox(height: 8),
             const Text(
               "Soal untuk kuis ini belum ditambahkan.",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Color(0xFF64748B), height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -862,29 +1120,63 @@ class _ErrorState extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFFECACA), width: 2),
               ),
-              child: const Icon(Icons.cloud_off_rounded, size: 48, color: Color(0xFFEF4444)),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 48,
+                color: Color(0xFFEF4444),
+              ),
             ),
             const SizedBox(height: 20),
-            const Text("Gagal Memuat Soal", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+            const Text(
+              "Gagal Memuat Soal",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(error, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+            ),
             const SizedBox(height: 24),
             GestureDetector(
               onTap: onRetry,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_kBlue700, _kBlue500]),
+                  gradient: const LinearGradient(
+                    colors: [_kBlue700, _kBlue500],
+                  ),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: _kBlue500.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kBlue500.withOpacity(0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
                     SizedBox(width: 8),
-                    Text("Coba Lagi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                    Text(
+                      "Coba Lagi",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),

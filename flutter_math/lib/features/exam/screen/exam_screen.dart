@@ -14,7 +14,7 @@ const _kBlue900 = Color(0xFF0D2B6B);
 const _kBlue700 = Color(0xFF1A56DB);
 const _kBlue500 = Color(0xFF3B82F6);
 const _kBlue200 = Color(0xFFBFDBFE);
-const _kBlue50  = Color(0xFFEFF6FF);
+const _kBlue50 = Color(0xFFEFF6FF);
 const _kSurface = Color(0xFFF8FAFF);
 
 // ─────────────────────────────────────────────
@@ -65,8 +65,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen>
       vsync: this,
       duration: const Duration(milliseconds: 280),
     );
-    _slideAnim = Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0.06, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
     _fadeAnim = CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut);
     _slideCtrl.forward();
 
@@ -158,11 +160,13 @@ class _ExamScreenState extends ConsumerState<ExamScreen>
     final int score = ((correct / widget.questions.length) * 100).toInt();
 
     try {
-      await ref.read(examServiceProvider).submitExam(
-        sessionId: widget.sessionId,
-        score: score,
-        answers: finalAnswers,
-      );
+      await ref
+          .read(examServiceProvider)
+          .submitExam(
+            sessionId: widget.sessionId,
+            score: score,
+            answers: finalAnswers,
+          );
 
       ref.invalidate(analyticsProvider);
       ref.invalidate(examServiceProvider);
@@ -187,12 +191,23 @@ class _ExamScreenState extends ConsumerState<ExamScreen>
           SnackBar(
             backgroundColor: const Color(0xFF1A1A2E),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             content: Row(
               children: [
-                const Icon(Icons.error_outline_rounded, color: Color(0xFFFF6B6B), size: 18),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Color(0xFFFF6B6B),
+                  size: 18,
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: Text("Gagal submit: $e", style: const TextStyle(color: Colors.white))),
+                Expanded(
+                  child: Text(
+                    "Gagal submit: $e",
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
               ],
             ),
           ),
@@ -240,8 +255,15 @@ class _ExamScreenState extends ConsumerState<ExamScreen>
                     child: SlideTransition(
                       position: _goingForward
                           ? _slideAnim
-                          : Tween<Offset>(begin: const Offset(-0.06, 0), end: Offset.zero)
-                              .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut)),
+                          : Tween<Offset>(
+                              begin: const Offset(-0.06, 0),
+                              end: Offset.zero,
+                            ).animate(
+                              CurvedAnimation(
+                                parent: _slideCtrl,
+                                curve: Curves.easeOut,
+                              ),
+                            ),
                       child: _QuestionBody(
                         question: currentQ,
                         selectedAnswer: _answers[currentQ['id']],
@@ -320,7 +342,10 @@ class _ExamHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Soal", style: TextStyle(color: Color(0xFFBFDBFE), fontSize: 12)),
+                    const Text(
+                      "Soal",
+                      style: TextStyle(color: Color(0xFFBFDBFE), fontSize: 12),
+                    ),
                     Text(
                       "${currentIndex + 1} / $total",
                       style: const TextStyle(
@@ -337,27 +362,40 @@ class _ExamHeader extends StatelessWidget {
               if (timerDisplay != null)
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 400),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: isWarning ? const Color(0xFFEF4444).withOpacity(0.15) : Colors.white.withOpacity(0.12),
+                    color: isWarning
+                        ? const Color(0xFFEF4444).withOpacity(0.15)
+                        : Colors.white.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isWarning ? const Color(0xFFEF4444).withOpacity(0.5) : Colors.white.withOpacity(0.2),
+                      color: isWarning
+                          ? const Color(0xFFEF4444).withOpacity(0.5)
+                          : Colors.white.withOpacity(0.2),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isWarning ? Icons.warning_amber_rounded : Icons.timer_outlined,
-                        color: isWarning ? const Color(0xFFEF4444) : Colors.white,
+                        isWarning
+                            ? Icons.warning_amber_rounded
+                            : Icons.timer_outlined,
+                        color: isWarning
+                            ? const Color(0xFFEF4444)
+                            : Colors.white,
                         size: 16,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         timerDisplay!,
                         style: TextStyle(
-                          color: isWarning ? const Color(0xFFEF4444) : Colors.white,
+                          color: isWarning
+                              ? const Color(0xFFEF4444)
+                              : Colors.white,
                           fontWeight: FontWeight.w800,
                           fontSize: 16,
                           fontFeatures: const [FontFeature.tabularFigures()],
@@ -441,24 +479,71 @@ class _QuestionBody extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: _kBlue200, width: 1.2),
               boxShadow: [
-                BoxShadow(color: _kBlue500.withOpacity(0.07), blurRadius: 14, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: _kBlue500.withOpacity(0.07),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            child: Text(
-              question['question_text'] ?? '',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1E293B),
-                height: 1.6,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  question['question_text'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
+                    height: 1.6,
+                  ),
+                ),
+                if (question['question_image'] != null) ...[
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.network(
+                      question['question_image'],
+                      width: double.infinity,
+                      height: 180,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          height: 180,
+                          alignment: Alignment.center,
+                          color: _kBlue50,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: _kBlue500,
+                          ),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 180,
+                        alignment: Alignment.center,
+                        color: _kBlue50,
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          color: _kBlue200,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
 
           const SizedBox(height: 20),
           const Text(
             "Pilih jawaban:",
-            style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -474,6 +559,7 @@ class _QuestionBody extends StatelessWidget {
               child: _OptionTile(
                 optionKey: key,
                 text: opt['text'] ?? '',
+                imageUrl: opt['image'],
                 isSelected: isSelected,
                 gradient: gradient,
                 onTap: () => onAnswerSelected(key),
@@ -490,6 +576,7 @@ class _OptionTile extends StatefulWidget {
   const _OptionTile({
     required this.optionKey,
     required this.text,
+    this.imageUrl,
     required this.isSelected,
     required this.gradient,
     required this.onTap,
@@ -497,6 +584,7 @@ class _OptionTile extends StatefulWidget {
 
   final String optionKey;
   final String text;
+  final String? imageUrl;
   final bool isSelected;
   final List<Color> gradient;
   final VoidCallback onTap;
@@ -505,14 +593,21 @@ class _OptionTile extends StatefulWidget {
   State<_OptionTile> createState() => _OptionTileState();
 }
 
-class _OptionTileState extends State<_OptionTile> with SingleTickerProviderStateMixin {
+class _OptionTileState extends State<_OptionTile>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 100), lowerBound: 0.97, upperBound: 1.0, value: 1.0);
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      lowerBound: 0.97,
+      upperBound: 1.0,
+      value: 1.0,
+    );
     _scale = _ctrl;
   }
 
@@ -526,17 +621,25 @@ class _OptionTileState extends State<_OptionTile> with SingleTickerProviderState
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) => _ctrl.reverse(),
-      onTapUp: (_) { _ctrl.forward(); widget.onTap(); },
+      onTapUp: (_) {
+        _ctrl.forward();
+        widget.onTap();
+      },
       onTapCancel: () => _ctrl.forward(),
       child: AnimatedBuilder(
         animation: _scale,
-        builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+        builder: (_, child) =>
+            Transform.scale(scale: _scale.value, child: child),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             gradient: widget.isSelected
-                ? LinearGradient(colors: widget.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight)
+                ? LinearGradient(
+                    colors: widget.gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
                 : null,
             color: widget.isSelected ? null : Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -545,51 +648,121 @@ class _OptionTileState extends State<_OptionTile> with SingleTickerProviderState
               width: 1.5,
             ),
             boxShadow: widget.isSelected
-                ? [BoxShadow(color: widget.gradient[0].withOpacity(0.30), blurRadius: 12, offset: const Offset(0, 4))]
-                : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                ? [
+                    BoxShadow(
+                      color: widget.gradient[0].withOpacity(0.30),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: widget.isSelected ? Colors.white.withOpacity(0.22) : _kBlue50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    widget.optionKey,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: widget.isSelected ? Colors.white : _kBlue700,
+              Row(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: widget.isSelected
+                          ? Colors.white.withOpacity(0.22)
+                          : _kBlue50,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.optionKey,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: widget.isSelected ? Colors.white : _kBlue700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      widget.text,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: widget.isSelected
+                            ? Colors.white
+                            : const Color(0xFF1E293B),
+                        fontWeight: widget.isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  if (widget.isSelected)
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ),
+                ],
+              ),
+              if (widget.imageUrl != null) ...[
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.only(left: 48),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      widget.imageUrl!,
+                      width: double.infinity,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          height: 100,
+                          alignment: Alignment.center,
+                          color: Colors.white.withOpacity(0.15),
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: widget.isSelected
+                                  ? Colors.white
+                                  : _kBlue500,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 100,
+                        alignment: Alignment.center,
+                        color: Colors.white.withOpacity(0.15),
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: widget.isSelected ? Colors.white70 : _kBlue200,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  widget.text,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: widget.isSelected ? Colors.white : const Color(0xFF1E293B),
-                    fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.normal,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              if (widget.isSelected)
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
-                ),
+              ],
             ],
           ),
         ),
@@ -624,7 +797,14 @@ class _QuestionNavigator extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Navigasi Soal", style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+          const Text(
+            "Navigasi Soal",
+            style: TextStyle(
+              fontSize: 11,
+              color: Color(0xFF94A3B8),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 8),
           SizedBox(
             height: 36,
@@ -646,14 +826,28 @@ class _QuestionNavigator extends StatelessWidget {
                       gradient: isActive
                           ? const LinearGradient(colors: [_kBlue700, _kBlue500])
                           : null,
-                      color: isActive ? null : isAnswered ? _kBlue50 : const Color(0xFFF1F5F9),
+                      color: isActive
+                          ? null
+                          : isAnswered
+                          ? _kBlue50
+                          : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isActive ? Colors.transparent : isAnswered ? _kBlue200 : const Color(0xFFE2E8F0),
+                        color: isActive
+                            ? Colors.transparent
+                            : isAnswered
+                            ? _kBlue200
+                            : const Color(0xFFE2E8F0),
                         width: 1.5,
                       ),
                       boxShadow: isActive
-                          ? [BoxShadow(color: _kBlue500.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 3))]
+                          ? [
+                              BoxShadow(
+                                color: _kBlue500.withOpacity(0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
                           : null,
                     ),
                     child: Center(
@@ -662,7 +856,11 @@ class _QuestionNavigator extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isActive ? Colors.white : isAnswered ? _kBlue700 : const Color(0xFF94A3B8),
+                          color: isActive
+                              ? Colors.white
+                              : isAnswered
+                              ? _kBlue700
+                              : const Color(0xFF94A3B8),
                         ),
                       ),
                     ),
@@ -706,7 +904,13 @@ class _BottomActions extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, -3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -717,7 +921,10 @@ class _BottomActions extends StatelessWidget {
             child: GestureDetector(
               onTap: isFirst ? null : onPrev,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: _kBlue50,
                   borderRadius: BorderRadius.circular(14),
@@ -726,9 +933,20 @@ class _BottomActions extends StatelessWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.arrow_back_ios_new_rounded, color: _kBlue700, size: 14),
+                    Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: _kBlue700,
+                      size: 14,
+                    ),
                     SizedBox(width: 6),
-                    Text("Kembali", style: TextStyle(color: _kBlue700, fontWeight: FontWeight.w700, fontSize: 14)),
+                    Text(
+                      "Kembali",
+                      style: TextStyle(
+                        color: _kBlue700,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -740,18 +958,40 @@ class _BottomActions extends StatelessWidget {
             GestureDetector(
               onTap: onNext,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_kBlue700, _kBlue500]),
+                  gradient: const LinearGradient(
+                    colors: [_kBlue700, _kBlue500],
+                  ),
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: _kBlue500.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kBlue500.withOpacity(0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text("Lanjut", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                    Text(
+                      "Lanjut",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
                     SizedBox(width: 6),
-                    Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                   ],
                 ),
               ),
@@ -761,28 +1001,54 @@ class _BottomActions extends StatelessWidget {
               onTap: isSubmitting ? null : onSubmit,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   gradient: isSubmitting
                       ? null
-                      : const LinearGradient(colors: [Color(0xFF059669), Color(0xFF10B981)]),
+                      : const LinearGradient(
+                          colors: [Color(0xFF059669), Color(0xFF10B981)],
+                        ),
                   color: isSubmitting ? const Color(0xFFCBD5E1) : null,
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: isSubmitting
                       ? null
-                      : [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                      : [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withOpacity(0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                 ),
                 child: isSubmitting
                     ? const SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
                       )
                     : const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 18),
+                          Icon(
+                            Icons.check_circle_outline_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                           SizedBox(width: 8),
-                          Text("Selesai & Submit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                          Text(
+                            "Selesai & Submit",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -823,40 +1089,73 @@ class _SubmitConfirmSheet extends StatelessWidget {
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12, bottom: 24),
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: unanswered > 0 ? const Color(0xFFFFFBEB) : const Color(0xFFF0FDF4),
+              color: unanswered > 0
+                  ? const Color(0xFFFFFBEB)
+                  : const Color(0xFFF0FDF4),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              unanswered > 0 ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
-              color: unanswered > 0 ? const Color(0xFFD97706) : const Color(0xFF059669),
+              unanswered > 0
+                  ? Icons.warning_amber_rounded
+                  : Icons.check_circle_outline_rounded,
+              color: unanswered > 0
+                  ? const Color(0xFFD97706)
+                  : const Color(0xFF059669),
               size: 40,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             unanswered > 0 ? "Masih Ada Soal Kosong" : "Siap Submit?",
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
           ),
           const SizedBox(height: 8),
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
-              style: const TextStyle(fontSize: 14, color: Color(0xFF64748B), height: 1.5),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                height: 1.5,
+              ),
               children: [
-                TextSpan(text: "Terjawab: ", children: [
-                  TextSpan(text: "$answered", style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.w700)),
-                  TextSpan(text: " / $total soal"),
-                ]),
+                TextSpan(
+                  text: "Terjawab: ",
+                  children: [
+                    TextSpan(
+                      text: "$answered",
+                      style: const TextStyle(
+                        color: Color(0xFF059669),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    TextSpan(text: " / $total soal"),
+                  ],
+                ),
                 if (unanswered > 0) ...[
                   const TextSpan(text: "\n"),
-                  TextSpan(text: "$unanswered soal belum dijawab", style: const TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.w600)),
+                  TextSpan(
+                    text: "$unanswered soal belum dijawab",
+                    style: const TextStyle(
+                      color: Color(0xFFD97706),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const TextSpan(text: " akan dihitung kosong."),
                 ],
               ],
@@ -875,7 +1174,14 @@ class _SubmitConfirmSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Center(
-                      child: Text("Periksa Lagi", style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700, fontSize: 15)),
+                      child: Text(
+                        "Periksa Lagi",
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -891,17 +1197,36 @@ class _SubmitConfirmSheet extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF10B981)]),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF059669), Color(0xFF10B981)],
+                      ),
                       borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withOpacity(0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: const Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.send_rounded, color: Colors.white, size: 16),
+                          Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                           SizedBox(width: 8),
-                          Text("Ya, Submit!", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                          Text(
+                            "Ya, Submit!",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
                         ],
                       ),
                     ),

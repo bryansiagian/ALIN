@@ -6,148 +6,59 @@ use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\PlacementResult;
 use App\Models\QuestionBank;
+use App\Models\Topic;
+use App\Models\UserProgress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PlacementController extends Controller
 {
-    /**
-     * Ambil soal placement test.
-     * Hanya bisa diakses jika belum pernah mengerjakan placement test.
-     */
 
-    /*
+    // Tambahkan ini di dalam class PlacementController
+    public static function getAdaptiveDifficulty(string $grade): string
+    {
+        return match ($grade) {
+            'A'     => 'hard',
+            'AB'    => 'hard',
+            'B'     => 'medium',
+            'BC'    => 'medium',
+            'C'     => 'easy',
+            'D'     => 'easy',
+            default => 'easy',
+        };
+    }
+    /**
+     * Ambil soal placement test (10 soal acak dari topik non-placement).
+     */
     public function getPlacementTest(Request $request)
     {
-        $user = $request->user();
+        // 1. Hanya ambil soal dari laci "Placement"
+        $questions = QuestionBank::where('is_placement', true)
+            ->inRandomOrder()
+            ->limit(10)
+            ->get();
 
-        // Tolak jika sudah pernah mengerjakan
-        if ($user->has_taken_placement) {
-            return response()->json([
-                'message' => 'Anda sudah pernah mengerjakan placement test.'
-            ], 403);
-        }
-
-        // Ambil assignment yang ditandai sebagai placement test
-        $assignment = Assignment::with('questions')
-            ->where('is_placement', true)
-            ->where('status', 'published')
-            ->first();
-
-        if (!$assignment) {
-            return response()->json([
-                'message' => 'Placement test belum tersedia. Hubungi dosen pengampu.'
-            ], 404);
-        }
-
-        return response()->json([
-            'assignment' => $assignment,
-            'questions'  => $assignment->questions,
-        ]);
-    }
-    */
-
-    public function getPlacementTest(Request $request)
-    {
-        // ID 6 adalah ID rak Placement Test yang baru saja kita buat
-        $placementTopicId = 6;
-
-        // 1. Mengambil soal dengan filter ganda (Topic ID 6 + Difficulty)
-        $easy = \App\Models\QuestionBank::where('topic_id', $placementTopicId)
-            ->where('difficulty', 'easy')
-            ->inRandomOrder()->limit(3)->get();
-
-        $medium = \App\Models\QuestionBank::where('topic_id', $placementTopicId)
-            ->where('difficulty', 'medium')
-            ->inRandomOrder()->limit(4)->get();
-
-        $hard = \App\Models\QuestionBank::where('topic_id', $placementTopicId)
-            ->where('difficulty', 'hard')
-            ->inRandomOrder()->limit(3)->get();
-
-        // 2. Gabungkan hasil dari ketiga kategori
-        $questions = $easy->concat($medium)->concat($hard)->shuffle();
-
-        // 3. Pastikan jumlah soal cukup (jika tidak, kirim error)
-        if ($questions->count() < 10) {
-            return response()->json(['message' => 'Jumlah soal tidak mencukupi di database!'], 404);
-        }
-
-        return response()->json([
-            'questions' => $questions,
-        ]);
-    }
-
-    /**
-     * Submit jawaban placement test dan hitung grade.
-     */
-    /*
-    public function submitPlacementTest(Request $request)
-    {
-        $user = $request->user();
-
-        // Tolak jika sudah pernah mengerjakan
-        if ($user->has_taken_placement) {
-            return response()->json([
-                'message' => 'Anda sudah pernah mengerjakan placement test.'
-            ], 403);
-        }
-
-        $assignment = Assignment::with('questions')
-            ->where('is_placement', true)
-            ->where('status', 'published')
-            ->first();
-
-        if (!$assignment) {
-            return response()->json(['message' => 'Placement test tidak ditemukan.'], 404);
-        }
-
-        return DB::transaction(function () use ($request, $user, $assignment) {
-            // Hitung skor dari jawaban yang dikirim Flutter
-            $answers       = $request->answers ?? []; // { "question_id": "A", ... }
-            $totalQuestion = $assignment->questions->count();
-            $correct       = 0;
-
-            foreach ($assignment->questions as $question) {
-                $userAnswer = $answers[$question->id] ?? null;
-                if ($userAnswer && $userAnswer === $question->correct_answer) {
-                    $correct++;
-                }
+        // 2. Decode opsi jawaban agar aman dibaca Flutter
+        foreach ($questions as $q) {
+            if (is_string($q->options)) {
+                $q->options = json_decode($q->options, true);
             }
+        }
 
-            // Hitung NA (Nilai Akhir) skala 0-100
-            $score = $totalQuestion > 0
-                ? round(($correct / $totalQuestion) * 100, 2)
-                : 0;
+        // 3. Validasi jika soal placement kosong
+        if ($questions->count() < 1) {
+            return response()->json(['message' => 'Soal placement belum tersedia di database!'], 404);
+        }
 
-            // Tentukan grade berdasarkan skema dosen
-            $grade = $this->determineGrade($score);
-
-            // Simpan hasil placement
-            PlacementResult::create([
-                'user_id'       => $user->id,
-                'assignment_id' => $assignment->id,
-                'score'         => $score,
-                'grade'         => $grade,
-                'taken_at'      => now(),
-            ]);
-
-            // Tandai user sudah mengerjakan placement test
-            $user->update(['has_taken_placement' => true]);
-
-            return response()->json([
-                'score' => $score,
-                'grade' => $grade,
-                'correct'       => $correct,
-                'total'         => $totalQuestion,
-                'message'       => 'Placement test berhasil diselesaikan.',
-            ]);
-        });
+        // 4. Langsung kembalikan soalnya (Jangan ditimpa lagi!)
+        return response()->json(['questions' => $questions]);
     }
-    */
+
+    /**
+     * Submit jawaban placement test dan simpan hasil.
+     */
     public function submitPlacementTest(Request $request)
     {
-        // 1. Validasi input dari Flutter
         $request->validate([
             'answers' => 'required|array',
             'answers.*.question_id' => 'required|exists:question_banks,id',
@@ -158,48 +69,50 @@ class PlacementController extends Controller
         $correctCount = 0;
         $totalQuestions = count($answers);
 
-        // 2. Hitung jumlah jawaban yang benar
         foreach ($answers as $answer) {
-            $question = \App\Models\QuestionBank::find($answer['question_id']);
-
+            $question = QuestionBank::find($answer['question_id']);
             if ($question && strtoupper($question->correct_answer) === strtoupper($answer['selected_option'])) {
                 $correctCount++;
             }
         }
 
-        // 3. Kalkulasi nilai murni (Skor 0 - 100)
         $score = $totalQuestions > 0 ? ($correctCount / $totalQuestions) * 100 : 0;
+        $grade = $this->determineGrade($score);
+        $level = $this->getUnlockedLevel($score);
 
-        // --- PEMBARUAN STRATEGIS: SKEMA BASE-100 SESUAI REVISI ---
-        if ($score >= 91) {
-            $unlockedLevel = 301; // Awal Bab 4
-        } elseif ($score >= 81) {
-            $unlockedLevel = 250; // Pertengahan Bab 3
-        } elseif ($score >= 71) {
-            $unlockedLevel = 201; // Awal Bab 3
-        } elseif ($score >= 61) {
-            $unlockedLevel = 150; // Pertengahan Bab 2
-        } elseif ($score >= 51) {
-            $unlockedLevel = 101; // Awal Bab 2
-        } elseif ($score >= 41) {
-            $unlockedLevel = 50;  // Pertengahan Bab 1
-        } else {
-            $unlockedLevel = 1;   // Awal Bab 1
-        }
-        // ---------------------------------------------------------
+        $result = new PlacementResult();
+        $result->user_id = $request->user()->id;
+        $result->score = (float) $score;
+        $result->grade = $grade;
+        $result->unlocked_level = (int) $level; // PASTIKAN NAMA KOLOM SAMA PERSIS DENGAN DB
+        $result->save();
 
-        // 5. Kunci hasil ke dalam database
-        DB::table('placement_results')->insert([
-            'user_id' => $request->user()->id,
-            'score' => $score,
-            'unlocked_level' => $unlockedLevel,
-            'created_at' => now(),
-            'updated_at' => now(),
+        // Tentukan level berdasarkan skor
+        $unlockedLevel = $this->getUnlockedLevel($score);
+
+        // Simpan hasil ke tabel placement_results
+        PlacementResult::create([
+            'user_id'        => $request->user()->id,
+            'score'          => (float) $score,
+            'grade'          => $grade ?? 'E', // Beri nilai
+            'unlocked_level' => (int) ($unlockedLevel ?? 1),
+            'created_at'     => now(),
+            'updated_at'     => now(),
         ]);
 
+        // Tandai user sudah mengerjakan
         DB::table('users')->where('id', $request->user()->id)->update(['has_taken_placement' => true]);
 
-        // 6. Kirim respons balik ke Flutter
+        // Update progress user ke topik yang sesuai
+        UserProgress::updateOrCreate(
+            ['user_id' => $request->user()->id],
+            [
+                'topic_id' => $this->getTargetTopicId($score),
+                'status' => 'in_progress',
+                'last_activity' => now(),
+            ]
+        );
+
         return response()->json([
             'message' => 'Placement test berhasil diselesaikan!',
             'score' => $score,
@@ -207,21 +120,10 @@ class PlacementController extends Controller
         ], 200);
     }
 
-    /**
-     * Ambil hasil placement test milik user yang sedang login.
-     * Dipakai Flutter untuk menampilkan grade di profil/home.
-     */
-    /**
-     * Ambil hasil placement test milik user yang sedang login.
-     * Dipakai Flutter untuk menampilkan grade di profil/home.
-     */
     public function getMyResult(Request $request)
     {
-        $user   = $request->user();
-        $result = PlacementResult::where('user_id', $user->id)
-            // --- PERBAIKAN: Ganti taken_at menjadi created_at ---
-            ->latest('created_at')
-            // ----------------------------------------------------
+        $result = PlacementResult::where('user_id', $request->user()->id)
+            ->latest('created_at') // Sudah menggunakan created_at
             ->first();
 
         if (!$result) {
@@ -231,41 +133,19 @@ class PlacementController extends Controller
         return response()->json($result);
     }
 
-    /**
-     * [DOSEN] Tandai assignment sebagai placement test.
-     * Otomatis unset assignment lain yang sebelumnya ditandai.
-     */
     public function setPlacementAssignment(Request $request, $assignmentId)
     {
         DB::transaction(function () use ($assignmentId) {
-            // Unset semua assignment yang sebelumnya jadi placement
-            Assignment::where('is_placement', true)
-                ->update(['is_placement' => false]);
-
-            // Set assignment baru sebagai placement
-            Assignment::findOrFail($assignmentId)
-                ->update(['is_placement' => true]);
+            Assignment::where('is_placement', true)->update(['is_placement' => false]);
+            Assignment::findOrFail($assignmentId)->update(['is_placement' => true]);
         });
 
-        return response()->json([
-            'message' => 'Assignment berhasil dijadikan placement test.'
-        ]);
+        return response()->json(['message' => 'Assignment berhasil dijadikan placement test.']);
     }
 
-    /**
-     * Menentukan grade berdasarkan skema penilaian dosen.
-     *
-     * A  : 79.5 <= NA < 100
-     * AB : 72   <= NA < 79.5
-     * B  : 64.5 <= NA < 72
-     * BC : 57   <= NA < 64.5
-     * C  : 49.5 <= NA < 57
-     * D  : 34   <= NA < 49.5
-     * E  :  0   <= NA < 34
-     */
     private function determineGrade(float $score): string
     {
-        return match(true) {
+        return match (true) {
             $score >= 79.5 => 'A',
             $score >= 72.0 => 'AB',
             $score >= 64.5 => 'B',
@@ -276,30 +156,27 @@ class PlacementController extends Controller
         };
     }
 
-    public function getLecturerPlacementResults()
+    private function getUnlockedLevel(float $score): int
     {
-        // Ambil semua mahasiswa yang sudah submit placement
-        $results = \App\Models\PlacementResult::with('user')
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn($r) => [
-                'user'  => ['id' => $r->user->id, 'name' => $r->user->name],
-                'score' => $r->score,
-                'grade' => $r->grade,
-            ]);
-
-        return response()->json($results);
+        if ($score >= 91) return 301;
+        if ($score >= 81) return 250;
+        if ($score >= 71) return 201;
+        if ($score >= 61) return 150;
+        if ($score >= 51) return 101;
+        if ($score >= 41) return 50;
+        return 1;
     }
 
-    /**
-     * Menerjemahkan grade placement menjadi tingkat kesulitan kuis adaptif.
-     */
-    public static function getAdaptiveDifficulty(string $grade): string
+    private function getTargetTopicId(float $score): int
     {
-        return match ($grade) {
-            'A', 'AB' => 'hard',
-            'B', 'BC' => 'medium',
-            default   => 'easy',
-        };
+        if ($score >= 91) return 4;
+        if ($score >= 71) return 3;
+        if ($score >= 51) return 2;
+        return 1;
+    }
+
+    public function getLecturerPlacementResults()
+    {
+        return response()->json(PlacementResult::with('user')->orderByDesc('created_at')->get());
     }
 }

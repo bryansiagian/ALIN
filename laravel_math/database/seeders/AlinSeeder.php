@@ -166,4 +166,4 @@ class AlinSeeder extends Seeder
 
         $this->command->info('AlinSeeder: Berhasil membuat ' . count($students) . ' mahasiswa!');
     }
-} 
+}

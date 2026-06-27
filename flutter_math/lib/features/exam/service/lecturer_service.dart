@@ -46,6 +46,14 @@ class LecturerService {
     await _dio.put('lecturer/questions/$id', data: data);
   }
 
+  Future<String> uploadQuestionImage(File imageFile) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(imageFile.path),
+    });
+    final response = await _dio.post('/lecturer/upload-image', data: formData);
+    return response.data['url'] as String;
+  }
+
   Future<void> resetAttempt(int sessionId) async {
     await _dio.delete('lecturer/sessions/$sessionId/reset');
   }
