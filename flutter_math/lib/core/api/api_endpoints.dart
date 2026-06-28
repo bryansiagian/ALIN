@@ -1,6 +1,6 @@
 class ApiEndpoints {
   //static const String baseUrl = 'https://9ide6w2asa.ap-southeast-2.awsapprunner.com/api/'; // Emulator IP
-  static const String baseUrl ='http://192.168.43.188:8000/api/'; // Emulator IP
+  static const String baseUrl ='http://13.211.72.60/api/'; // Emulator IP
 
 
   // Auth
