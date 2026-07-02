@@ -6,7 +6,7 @@ use App\Livewire\Dosen\Dashboard;
 use App\Livewire\Dosen\Topics;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('dosen.login');
 });
 
 Route::prefix('dosen')->name('dosen.')->group(function () {
