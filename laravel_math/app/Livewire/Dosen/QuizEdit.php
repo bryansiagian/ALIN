@@ -32,8 +32,8 @@ class QuizEdit extends Component
 
         $this->title = $this->assignment->title;
         $this->description = $this->assignment->description === '-' ? '' : $this->assignment->description;
-        $this->start_time = $this->assignment->start_time->timezone('Asia/Jakarta')->format('Y-m-d\TH:i');
-        $this->deadline = $this->assignment->deadline->timezone('Asia/Jakarta')->format('Y-m-d\TH:i');
+        $this->start_time = $this->assignment->start_time ? $this->assignment->start_time->timezone('Asia/Jakarta')->format('Y-m-d\TH:i') : '';
+        $this->deadline = $this->assignment->deadline ? $this->assignment->deadline->timezone('Asia/Jakarta')->format('Y-m-d\TH:i') : '';
         $this->is_safe_exam = (bool) $this->assignment->is_safe_exam;
         $this->allow_reattempt = (bool) $this->assignment->allow_reattempt;
         $this->attempt_limit = $this->assignment->attempt_limit;
