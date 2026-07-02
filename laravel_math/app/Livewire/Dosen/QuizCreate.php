@@ -141,6 +141,6 @@ class QuizCreate extends Component
 
     public function render()
     {
-        return view('livewire.dosen.quiz-create', compact('topics'))->layout('layouts.dosen');
+        return view('livewire.dosen.quiz-create')->layout('layouts.dosen');
     }
 }
