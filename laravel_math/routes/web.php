@@ -8,6 +8,7 @@ use App\Livewire\Dosen\Materials;
 use App\Livewire\Dosen\Quizzes;
 use App\Livewire\Dosen\QuizCreate;
 use App\Livewire\Dosen\QuizEdit;
+use App\Livewire\Dosen\QuestionImport;
 
 Route::get('/', function () {
     return redirect()->route('dosen.login');
@@ -23,6 +24,7 @@ Route::prefix('dosen')->name('dosen.')->group(function () {
         Route::get('/quizzes', Quizzes::class)->name('quizzes');
         Route::get('/quizzes/create', QuizCreate::class)->name('quizzes.create');
         Route::get('/quizzes/{id}/edit', QuizEdit::class)->name('quizzes.edit');
+        Route::get('/questions/import', QuestionImport::class)->name('questions.import');
         Route::post('/logout', function () {
             auth()->logout();
             request()->session()->invalidate();
