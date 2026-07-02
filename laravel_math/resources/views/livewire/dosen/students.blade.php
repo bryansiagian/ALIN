@@ -5,7 +5,7 @@
     </div>
 
     {{-- Filter --}}
-    <div class="bg-white rounded-xl border border-slate-200 p-4 mb-4 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+    <div class="bg-white rounded-xl border border-slate-200 p-4 mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
         <div>
             <label class="block text-xs font-medium text-slate-600 mb-1">Nama</label>
             <input type="text" wire:model.live.debounce.400ms="name" placeholder="Cari nama..."
@@ -32,6 +32,13 @@
                 <option value="C">C</option>
                 <option value="D">D</option>
                 <option value="E">E</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Urutkan</label>
+            <select wire:model.live="sort_by" class="w-full rounded-lg border-slate-300 text-sm">
+                <option value="nim">NIM</option>
+                <option value="name">Abjad (Nama)</option>
             </select>
         </div>
         <div>

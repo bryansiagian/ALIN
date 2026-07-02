@@ -15,10 +15,11 @@ class Students extends Component
     public $nim = '';
     public $min_completed = '';
     public $grade_filter = '';
+    public $sort_by = 'nim'; // default: urut berdasarkan NIM
 
     public function updating($property)
     {
-        if (in_array($property, ['name', 'nim', 'min_completed', 'grade_filter'])) {
+        if (in_array($property, ['name', 'nim', 'min_completed', 'grade_filter', 'sort_by'])) {
             $this->resetPage();
         }
     }
@@ -26,12 +27,12 @@ class Students extends Component
     public function resetFilters()
     {
         $this->reset(['name', 'nim', 'min_completed', 'grade_filter']);
+        $this->sort_by = 'nim';
         $this->resetPage();
     }
 
     public function render()
     {
-        // Ambil grade + skor placement TERBARU per mahasiswa (subquery, hindari N+1)
         $latestPlacementIds = DB::table('placement_results')
             ->selectRaw('MAX(id) as id')
             ->groupBy('user_id');
@@ -41,19 +42,20 @@ class Students extends Component
             ->when($this->nim, fn($q) => $q->where('nim', 'like', '%' . $this->nim . '%'))
             ->withCount(['examSessions as completed_exams_count' => function ($q) {
                 $q->where('status', 'submitted');
-            }])
-            ->when($this->min_completed !== '', function ($q) {
-                $q->has('examSessions', '>=', 0); // placeholder agar withCount ter-load; filter asli di bawah via having
-            });
+            }]);
 
-        // withCount menghasilkan kolom biasa, bukan relasi, jadi filter angka pakai having via query builder mentah
-        $students = $query->orderBy('name')->get();
+        match ($this->sort_by) {
+            'name' => $query->orderBy('name'),
+            'nim' => $query->orderBy('nim'),
+            default => $query->orderBy('nim'),
+        };
+
+        $students = $query->get();
 
         if ($this->min_completed !== '') {
             $students = $students->filter(fn($s) => $s->completed_exams_count >= (int) $this->min_completed);
         }
 
-        // Join grade placement terbaru
         $latestPlacements = DB::table('placement_results')
             ->select('user_id', 'grade', 'score', 'unlocked_level')
             ->whereIn('id', $latestPlacementIds)
@@ -67,10 +69,11 @@ class Students extends Component
             });
         }
 
-        // Pagination manual karena filter dilakukan di collection, bukan query builder
+        // Pertahankan urutan hasil query asli (NIM/nama) setelah filter collection
+        $students = $students->values();
+
         $perPage = 15;
         $page = request()->get('page', 1);
-        $students = $students->values();
         $paged = new \Illuminate\Pagination\LengthAwarePaginator(
             $students->forPage($page, $perPage),
             $students->count(),
