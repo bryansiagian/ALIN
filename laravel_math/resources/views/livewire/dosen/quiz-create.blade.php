@@ -22,7 +22,7 @@
                 <textarea wire:model="description" rows="2" class="w-full rounded-lg border-slate-300 text-sm"></textarea>
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Waktu Mulai</label>
                     <input type="datetime-local" wire:model="start_time" class="w-full rounded-lg border-slate-300 text-sm">
@@ -33,31 +33,29 @@
                     <input type="datetime-local" wire:model="deadline" class="w-full rounded-lg border-slate-300 text-sm">
                     @error('deadline') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Durasi (menit)</label>
-                    <input type="number" wire:model="duration_minutes" class="w-full rounded-lg border-slate-300 text-sm">
-                    @error('duration_minutes') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
-                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <label class="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" wire:model="is_safe_exam" class="rounded border-slate-300 text-indigo-600">
+                    <input type="checkbox" wire:model.live="is_safe_exam" class="rounded border-slate-300 text-indigo-600">
                     Mode Ujian Aman (Safe Exam Browser)
                 </label>
                 <label class="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" wire:model="show_results" class="rounded border-slate-300 text-indigo-600">
+                    <input type="checkbox" wire:model.live="show_results" class="rounded border-slate-300 text-indigo-600">
                     Tampilkan hasil ke mahasiswa
                 </label>
                 <label class="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" wire:model="allow_reattempt" class="rounded border-slate-300 text-indigo-600">
+                    <input type="checkbox" wire:model.live="allow_reattempt" class="rounded border-slate-300 text-indigo-600">
                     Izinkan mengulang
                 </label>
+            </div>
+
+            @if ($allow_reattempt)
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Batas Percobaan</label>
                     <input type="number" wire:model="attempt_limit" min="1" class="w-full rounded-lg border-slate-300 text-sm">
                 </div>
-            </div>
+            @endif
 
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Password Kuis (opsional)</label>

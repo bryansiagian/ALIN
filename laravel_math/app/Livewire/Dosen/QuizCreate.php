@@ -18,7 +18,6 @@ class QuizCreate extends Component
     public $description = '';
     public $start_time = '';
     public $deadline = '';
-    public $duration_minutes = 30;
     public $is_safe_exam = false;
     public $allow_reattempt = false;
     public $attempt_limit = 1;
@@ -60,7 +59,6 @@ class QuizCreate extends Component
             'title' => 'required|string|max:255',
             'start_time' => 'required|date',
             'deadline' => 'required|date|after:start_time',
-            'duration_minutes' => 'required|integer|min:1',
             'attempt_limit' => 'required|integer|min:1',
             'password' => 'nullable|string|max:255',
             'questions' => 'required|array|min:1',
@@ -82,9 +80,9 @@ class QuizCreate extends Component
                 'topic_id' => 1,
                 'title' => $this->title,
                 'description' => $this->description ?: '-',
-                'start_time' => $this->start_time,
-                'deadline' => $this->deadline,
-                'duration_minutes' => $this->duration_minutes,
+                'start_time' => \Carbon\Carbon::parse($this->start_time, 'Asia/Jakarta')->utc(),
+                'deadline' => \Carbon\Carbon::parse($this->deadline, 'Asia/Jakarta')->utc(),
+                'duration_minutes' => \Carbon\Carbon::parse($this->start_time, 'Asia/Jakarta')->diffInMinutes(\Carbon\Carbon::parse($this->deadline, 'Asia/Jakarta')),
                 'question_count' => count($this->questions),
                 'is_safe_exam' => $this->is_safe_exam,
                 'allow_reattempt' => $this->allow_reattempt,
