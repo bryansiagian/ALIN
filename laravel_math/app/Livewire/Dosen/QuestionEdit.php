@@ -25,13 +25,30 @@ class QuestionEdit extends Component
         $this->existing_image = $this->question->question_image;
         $this->correct_answer = $this->question->correct_answer;
 
-        foreach ($this->question->options as $opt) {
-            $this->options[] = [
-                'key' => $opt['key'],
-                'text' => $opt['text'],
-                'image' => null,
-                'existing_image' => $opt['image'] ?? null,
-            ];
+        $rawOptions = $this->question->options ?? [];
+
+        // Deteksi format: list (soal kuis/gamifikasi) vs map asosiatif A/B/C/D (soal placement)
+        $isList = array_keys($rawOptions) === range(0, count($rawOptions) - 1);
+
+        if ($isList) {
+            foreach ($rawOptions as $opt) {
+                $this->options[] = [
+                    'key' => $opt['key'] ?? '',
+                    'text' => (string) ($opt['text'] ?? ''),
+                    'image' => null,
+                    'existing_image' => $opt['image'] ?? null,
+                ];
+            }
+        } else {
+            // Map asosiatif ['A' => 'teks/angka', 'B' => ..., ...]
+            foreach ($rawOptions as $key => $val) {
+                $this->options[] = [
+                    'key' => $key,
+                    'text' => (string) $val,
+                    'image' => null,
+                    'existing_image' => null,
+                ];
+            }
         }
     }
 
