@@ -1,23 +1,30 @@
 <div>
+    {{-- Header --}}
     <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-slate-900">Rekap Placement Test</h1>
-        <p class="text-slate-500 text-sm mt-1">Hasil placement test terbaru seluruh mahasiswa.</p>
+        <h1 class="font-['Space_Grotesk'] text-2xl font-bold" style="color:#0F2D6B;">Rekap Placement Test</h1>
+        <p class="text-sm mt-1" style="color:#7C8DB5;">Hasil placement test terbaru seluruh mahasiswa.</p>
     </div>
 
-    <div class="bg-white rounded-xl border border-slate-200 p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+    {{-- Filter --}}
+    <div class="bg-white rounded-2xl p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
+        style="border:1px solid #E3EBFA; box-shadow: 0 4px 16px -8px rgba(75,142,255,0.15);">
         <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Nama</label>
+            <label class="block text-xs font-semibold mb-1.5" style="color:#0F2D6B;">Nama</label>
             <input type="text" wire:model.live.debounce.400ms="name" placeholder="Cari nama..."
-                class="w-full rounded-lg border-slate-300 text-sm">
+                class="w-full rounded-xl border pl-3.5 pr-3.5 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2"
+                style="background:#F0F6FF; border-color:#D0E2FF; color:#0F2D6B; --tw-ring-color:#4B8EFF33;">
         </div>
         <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">NIM</label>
+            <label class="block text-xs font-semibold mb-1.5" style="color:#0F2D6B;">NIM</label>
             <input type="text" wire:model.live.debounce.400ms="nim" placeholder="Cari NIM..."
-                class="w-full rounded-lg border-slate-300 text-sm">
+                class="w-full rounded-xl border pl-3.5 pr-3.5 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2"
+                style="background:#F0F6FF; border-color:#D0E2FF; color:#0F2D6B; --tw-ring-color:#4B8EFF33;">
         </div>
         <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Grade</label>
-            <select wire:model.live="grade_filter" class="w-full rounded-lg border-slate-300 text-sm">
+            <label class="block text-xs font-semibold mb-1.5" style="color:#0F2D6B;">Grade</label>
+            <select wire:model.live="grade_filter"
+                class="w-full rounded-xl border pl-3.5 pr-3.5 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2"
+                style="background:#F0F6FF; border-color:#D0E2FF; color:#0F2D6B; --tw-ring-color:#4B8EFF33;">
                 <option value="">Semua</option>
                 <option value="A">A</option>
                 <option value="AB">AB</option>
@@ -30,39 +37,45 @@
         </div>
         <div>
             <button type="button" wire:click="resetFilters"
-                class="w-full text-sm text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg px-3 py-2">
+                class="w-full text-sm font-semibold rounded-xl px-3 py-2.5 transition-colors"
+                style="color:#435273; border:1px solid #D0E2FF; background:#F5F8FC;"
+                onmouseover="this.style.background='#F0F6FF'" onmouseout="this.style.background='#F5F8FC'">
                 Reset Filter
             </button>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    {{-- Table --}}
+    <div class="bg-white rounded-2xl overflow-hidden"
+        style="border:1px solid #E3EBFA; box-shadow: 0 4px 16px -8px rgba(75,142,255,0.15);">
         <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+            <thead style="background:#F5F8FC;">
                 <tr>
-                    <th class="text-left px-5 py-3">Nama</th>
-                    <th class="text-left px-5 py-3">NIM</th>
-                    <th class="text-left px-5 py-3">Skor</th>
-                    <th class="text-left px-5 py-3">Grade</th>
-                    <th class="text-left px-5 py-3">Level Terbuka</th>
-                    <th class="text-left px-5 py-3">Tanggal</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider" style="color:#7C8DB5;">Nama</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider" style="color:#7C8DB5;">NIM</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider" style="color:#7C8DB5;">Skor</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider" style="color:#7C8DB5;">Grade</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider" style="color:#7C8DB5;">Level Terbuka</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider" style="color:#7C8DB5;">Tanggal</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($results as $r)
-                    <tr>
-                        <td class="px-5 py-3 font-medium text-slate-900">{{ $r->name }}</td>
-                        <td class="px-5 py-3 text-slate-600">{{ $r->nim ?? '-' }}</td>
-                        <td class="px-5 py-3 text-slate-600">{{ number_format($r->score, 1) }}</td>
-                        <td class="px-5 py-3">
-                            <span class="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700">{{ $r->grade }}</span>
+                    <tr style="border-top:1px solid #F0F4FC;">
+                        <td class="px-5 py-3.5 font-semibold" style="color:#0F2D6B;">{{ $r->name }}</td>
+                        <td class="px-5 py-3.5" style="color:#435273;">{{ $r->nim ?? '-' }}</td>
+                        <td class="px-5 py-3.5" style="color:#435273;">{{ number_format($r->score, 1) }}</td>
+                        <td class="px-5 py-3.5">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:#F0F6FF; color:#2F6FED;">{{ $r->grade }}</span>
                         </td>
-                        <td class="px-5 py-3 text-slate-600">{{ $r->unlocked_level }}</td>
-                        <td class="px-5 py-3 text-slate-600">{{ \Carbon\Carbon::parse($r->created_at)->timezone('Asia/Jakarta')->format('d M Y, H:i') }}</td>
+                        <td class="px-5 py-3.5" style="color:#435273;">{{ $r->unlocked_level }}</td>
+                        <td class="px-5 py-3.5" style="color:#435273;">{{ \Carbon\Carbon::parse($r->created_at)->timezone('Asia/Jakarta')->format('d M Y, H:i') }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-5 py-8 text-center text-slate-400 text-sm">Belum ada mahasiswa yang mengerjakan placement test.</td>
+                        <td colspan="6" class="px-5 py-12 text-center text-sm" style="color:#A9B6D6;">
+                            Belum ada mahasiswa yang mengerjakan placement test.
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
