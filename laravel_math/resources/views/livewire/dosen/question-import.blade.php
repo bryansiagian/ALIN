@@ -42,23 +42,12 @@
                 <h2 class="font-semibold text-slate-900">Soal Latihan (Gamifikasi / Level)</h2>
                 <p class="text-xs text-slate-500 mt-1">
                     Format kolom (baris pertama = header):<br>
-                    <code class="bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">question_text,option_a,option_b,option_c,option_d,correct_answer,difficulty</code>
+                    <code class="bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">topic_id,question_text,option_a,option_b,option_c,option_d,correct_answer,difficulty</code>
                 </p>
-                <p class="text-xs text-slate-400 mt-1">correct_answer: A/B/C/D &middot; difficulty: easy/medium/hard</p>
+                <p class="text-xs text-slate-400 mt-1">correct_answer: A/B/C/D &middot; difficulty: easy/medium/hard &middot; topic_id boleh berbeda-beda tiap baris</p>
             </div>
 
             <form wire:submit="importGamification" class="space-y-3">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Topik</label>
-                    <select wire:model="gamification_topic_id" class="w-full rounded-lg border-slate-300 text-sm">
-                        <option value="">-- Pilih Topik --</option>
-                        @foreach ($topics as $topic)
-                            <option value="{{ $topic->id }}">{{ $topic->title }}</option>
-                        @endforeach
-                    </select>
-                    @error('gamification_topic_id') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
-                </div>
-
                 <input type="file" wire:model="gamification_file" accept=".csv,.txt,.xlsx,.xls" class="text-sm">
                 @error('gamification_file') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
 

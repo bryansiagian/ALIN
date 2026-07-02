@@ -14,7 +14,6 @@ class QuestionImport extends Component
 
     public $placement_file;
     public $gamification_file;
-    public $gamification_topic_id = '';
 
     public $placement_message = null;
     public $gamification_message = null;
@@ -39,11 +38,10 @@ class QuestionImport extends Component
     {
         $this->validate([
             'gamification_file' => 'required|mimes:csv,txt,xlsx,xls|max:5120',
-            'gamification_topic_id' => 'required|exists:topics,id',
         ]);
 
         try {
-            Excel::import(new ExcelQuestionImport($this->gamification_topic_id), $this->gamification_file->getRealPath());
+            Excel::import(new ExcelQuestionImport(), $this->gamification_file->getRealPath());
             $this->gamification_message = ['type' => 'success', 'text' => 'Soal berhasil diimport.'];
         } catch (\Exception $e) {
             $this->gamification_message = ['type' => 'error', 'text' => 'Gagal: ' . $e->getMessage()];
