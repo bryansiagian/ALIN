@@ -19,6 +19,7 @@
                 <a href="{{ route('dosen.materials') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.materials') ? 'bg-slate-800 text-white' : '' }}">Materi</a>
                 <a href="{{ route('dosen.quizzes') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.quizzes*') ? 'bg-slate-800 text-white' : '' }}">Kuis</a>
                 <a href="{{ route('dosen.questions.import') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.questions.import') ? 'bg-slate-800 text-white' : '' }}">Upload Soal (CSV)</a>                {{-- menu lain nyusul: Topik, Bank Soal, Kuis, Placement Test, Mahasiswa --}}
+                <a href="{{ route('dosen.students') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.students*') ? 'bg-slate-800 text-white' : '' }}">Mahasiswa</a>
             </nav>
             <form action="{{ route('dosen.logout') }}" method="POST" class="px-3 py-4 border-t border-slate-800">
                 @csrf
