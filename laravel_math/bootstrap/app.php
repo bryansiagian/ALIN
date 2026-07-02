@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'is-lecturer' => \App\Http\Middleware\LecturerMiddleware::class, // Pastikan path ini benar
+            'lecturer' => \App\Http\Middleware\EnsureUserIsLecturer::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
