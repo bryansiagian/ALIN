@@ -11,6 +11,9 @@ use App\Livewire\Dosen\QuizEdit;
 use App\Livewire\Dosen\QuestionImport;
 use App\Livewire\Dosen\Students;
 use App\Livewire\Dosen\StudentDetail;
+use App\Livewire\Dosen\QuizResults;
+use App\Livewire\Dosen\PlacementResults;
+use App\Livewire\Dosen\QuestionEdit;
 
 Route::get('/', function () {
     return redirect()->route('dosen.login');
@@ -29,6 +32,9 @@ Route::prefix('dosen')->name('dosen.')->group(function () {
         Route::get('/questions/import', QuestionImport::class)->name('questions.import');
         Route::get('/students', Students::class)->name('students');
         Route::get('/students/{id}', StudentDetail::class)->name('students.detail');
+        Route::get('/quizzes/{id}/results', QuizResults::class)->name('quizzes.results');
+        Route::get('/placement/results', PlacementResults::class)->name('placement.results');
+        Route::get('/questions/{id}/edit', QuestionEdit::class)->name('questions.edit');
         Route::post('/logout', function () {
             auth()->logout();
             request()->session()->invalidate();
