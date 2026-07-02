@@ -42,12 +42,15 @@
                                 {{ ucfirst($quiz->status) }}
                             </span>
                         </td>
-                        <td class="px-5 py-3 text-right">
-                            @if (\Illuminate\Support\Facades\Route::has('dosen.quizzes.detail'))
-                                <a href="{{ route('dosen.quizzes.detail', $quiz->id) }}" class="text-indigo-600 hover:underline text-xs font-medium">Detail</a>
-                            @else
-                                <span class="text-slate-300 text-xs">Detail (segera hadir)</span>
-                            @endif
+                        <td class="px-5 py-3 text-right space-x-3">
+                            <a href="{{ route('dosen.quizzes.edit', $quiz->id) }}" class="text-indigo-600 hover:underline text-xs font-medium">Edit</a>
+                            <button
+                                type="button"
+                                wire:click="deleteQuiz({{ $quiz->id }})"
+                                wire:confirm="Yakin ingin menghapus kuis '{{ $quiz->title }}'? Semua soal dan hasil terkait akan ikut terhapus."
+                                class="text-red-600 hover:underline text-xs font-medium">
+                                Hapus
+                            </button>
                         </td>
                     </tr>
                 @empty
