@@ -43,6 +43,7 @@
                             </span>
                         </td>
                         <td class="px-5 py-3 text-right space-x-3">
+                            <a href="{{ route('dosen.quizzes.results', $quiz->id) }}" class="text-emerald-600 hover:underline text-xs font-medium">Hasil</a>
                             <a href="{{ route('dosen.quizzes.edit', $quiz->id) }}" class="text-indigo-600 hover:underline text-xs font-medium">Edit</a>
                             <button
                                 type="button"

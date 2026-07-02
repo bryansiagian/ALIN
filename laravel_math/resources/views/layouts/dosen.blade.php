@@ -18,6 +18,7 @@
                 <a href="{{ route('dosen.topics') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.topics') ? 'bg-slate-800 text-white' : '' }}">Topik</a>
                 <a href="{{ route('dosen.materials') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.materials') ? 'bg-slate-800 text-white' : '' }}">Materi</a>
                 <a href="{{ route('dosen.quizzes') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.quizzes*') ? 'bg-slate-800 text-white' : '' }}">Kuis</a>
+                <a href="{{ route('dosen.placement.results') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.placement.results') ? 'bg-slate-800 text-white' : '' }}">Hasil Placement</a>
                 <a href="{{ route('dosen.questions.import') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.questions.import') ? 'bg-slate-800 text-white' : '' }}">Upload Soal (CSV)</a>                {{-- menu lain nyusul: Topik, Bank Soal, Kuis, Placement Test, Mahasiswa --}}
                 <a href="{{ route('dosen.students') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.students*') ? 'bg-slate-800 text-white' : '' }}">Mahasiswa</a>
             </nav>
