@@ -14,6 +14,8 @@ use App\Livewire\Dosen\StudentDetail;
 use App\Livewire\Dosen\QuizResults;
 use App\Livewire\Dosen\PlacementResults;
 use App\Livewire\Dosen\QuestionEdit;
+use App\Livewire\Dosen\PlacementQuestions;
+use App\Livewire\Dosen\GamificationQuestions;
 
 Route::get('/', function () {
     return redirect()->route('dosen.login');
@@ -35,6 +37,8 @@ Route::prefix('dosen')->name('dosen.')->group(function () {
         Route::get('/quizzes/{id}/results', QuizResults::class)->name('quizzes.results');
         Route::get('/placement/results', PlacementResults::class)->name('placement.results');
         Route::get('/questions/{id}/edit', QuestionEdit::class)->name('questions.edit');
+        Route::get('/placement-questions', PlacementQuestions::class)->name('placement-questions');
+        Route::get('/gamification-questions', GamificationQuestions::class)->name('gamification-questions');
         Route::post('/logout', function () {
             auth()->logout();
             request()->session()->invalidate();
