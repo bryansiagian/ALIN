@@ -15,6 +15,7 @@
             </div>
             <nav class="flex-1 px-3 py-4 space-y-1 text-sm">
                 <a href="{{ route('dosen.dashboard') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800">Dashboard</a>
+                <a href="{{ route('dosen.topics') }}" class="block px-3 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dosen.topics') ? 'bg-slate-800 text-white' : '' }}">Topik</a>
                 {{-- menu lain nyusul: Topik, Bank Soal, Kuis, Placement Test, Mahasiswa --}}
             </nav>
             <form action="{{ route('dosen.logout') }}" method="POST" class="px-3 py-4 border-t border-slate-800">
