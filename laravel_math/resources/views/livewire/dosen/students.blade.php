@@ -4,9 +4,42 @@
         <p class="text-slate-500 text-sm mt-1">Lihat mahasiswa terdaftar dan riwayat pengerjaan soal mereka.</p>
     </div>
 
-    <div class="mb-4">
-        <input type="text" wire:model.live.debounce.400ms="search" placeholder="Cari nama atau NIM..."
-            class="w-full max-w-sm rounded-lg border-slate-300 text-sm">
+    {{-- Filter --}}
+    <div class="bg-white rounded-xl border border-slate-200 p-4 mb-4 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Nama</label>
+            <input type="text" wire:model.live.debounce.400ms="name" placeholder="Cari nama..."
+                class="w-full rounded-lg border-slate-300 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">NIM</label>
+            <input type="text" wire:model.live.debounce.400ms="nim" placeholder="Cari NIM..."
+                class="w-full rounded-lg border-slate-300 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Min. Kuis Selesai</label>
+            <input type="number" min="0" wire:model.live="min_completed" placeholder="cth: 2"
+                class="w-full rounded-lg border-slate-300 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Grade Placement</label>
+            <select wire:model.live="grade_filter" class="w-full rounded-lg border-slate-300 text-sm">
+                <option value="">Semua</option>
+                <option value="A">A</option>
+                <option value="AB">AB</option>
+                <option value="B">B</option>
+                <option value="BC">BC</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+            </select>
+        </div>
+        <div>
+            <button type="button" wire:click="resetFilters"
+                class="w-full text-sm text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg px-3 py-2">
+                Reset Filter
+            </button>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
