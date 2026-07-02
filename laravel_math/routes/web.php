@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Dosen\Login;
 use App\Livewire\Dosen\Dashboard;
 use App\Livewire\Dosen\Topics;
+use App\Livewire\Dosen\Materials;
 
 Route::get('/', function () {
     return redirect()->route('dosen.login');
@@ -15,6 +16,7 @@ Route::prefix('dosen')->name('dosen.')->group(function () {
     Route::middleware(['auth', 'lecturer'])->group(function () {
         Route::get('/dashboard', Dashboard::class)->name('dashboard');
         Route::get('/topics', Topics::class)->name('topics');
+        Route::get('/materials', Materials::class)->name('materials');
         Route::post('/logout', function () {
             auth()->logout();
             request()->session()->invalidate();
