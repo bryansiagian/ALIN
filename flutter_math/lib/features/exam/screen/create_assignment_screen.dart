@@ -298,7 +298,6 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
         'deadline': DateTime.parse(
           _deadlineController.text,
         ).toUtc().toIso8601String(),
-        'duration_minutes': 60,
         'is_safe_exam': _isSafeExam,
         'questions': finalQuestions,
         'allow_reattempt': _allowReattempt,
@@ -1580,6 +1579,12 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
         final time = await showTimePicker(
           context: context,
           initialTime: TimeOfDay.fromDateTime(initial),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+              child: child!,
+            );
+          },
         );
         if (time == null || !mounted) return;
 
