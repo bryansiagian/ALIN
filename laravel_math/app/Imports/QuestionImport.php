@@ -10,6 +10,13 @@ use Exception;
 
 class QuestionImport implements ToModel, WithHeadingRow, WithCustomCsvSettings
 {
+    protected $overrideTopicId;
+
+    public function __construct($overrideTopicId = null)
+    {
+        $this->overrideTopicId = $overrideTopicId;
+    }
+
     public function getCsvSettings(): array
     {
         return [
@@ -28,28 +35,24 @@ class QuestionImport implements ToModel, WithHeadingRow, WithCustomCsvSettings
         }
 
         $options = [];
-        if (!empty($row['option_a'])) $options[] = ['label' => 'A', 'text' => (string)$row['option_a']];
-        if (!empty($row['option_b'])) $options[] = ['label' => 'B', 'text' => (string)$row['option_b']];
-        if (!empty($row['option_c'])) $options[] = ['label' => 'C', 'text' => (string)$row['option_c']];
-        if (!empty($row['option_d'])) $options[] = ['label' => 'D', 'text' => (string)$row['option_d']];
-        if (!empty($row['option_e'])) $options[] = ['label' => 'E', 'text' => (string)$row['option_e']];
+        if (!empty($row['option_a'])) $options[] = ['key' => 'A', 'text' => (string)$row['option_a'], 'image' => null];
+        if (!empty($row['option_b'])) $options[] = ['key' => 'B', 'text' => (string)$row['option_b'], 'image' => null];
+        if (!empty($row['option_c'])) $options[] = ['key' => 'C', 'text' => (string)$row['option_c'], 'image' => null];
+        if (!empty($row['option_d'])) $options[] = ['key' => 'D', 'text' => (string)$row['option_d'], 'image' => null];
 
         $rawAnswer = strtoupper($row['correct_answer'] ?? 'A');
-        $cleanAnswer = preg_replace('/[^A-E]/', '', $rawAnswer);
-        $finalAnswer = substr($cleanAnswer, 0, 1);
-
-        if (empty($finalAnswer)) {
-            $finalAnswer = 'A';
-        }
+        $cleanAnswer = preg_replace('/[^A-D]/', '', $rawAnswer);
+        $finalAnswer = substr($cleanAnswer, 0, 1) ?: 'A';
 
         return new QuestionBank([
-            'topic_id'       => $row['topic_id'] ?? 1,
+            'topic_id'       => $this->overrideTopicId ?? ($row['topic_id'] ?? 1),
             'question_text'  => $row['question_text'],
             'question_type'  => $row['question_type'] ?? 'multiple_choice',
             'difficulty'     => $row['difficulty'] ?? 'medium',
             'options'        => $options,
             'correct_answer' => $finalAnswer,
             'explanation'    => $row['explanation'] ?? null,
+            'is_quiz'        => false,
             'is_placement'   => false,
         ]);
     }
