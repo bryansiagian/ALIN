@@ -18,6 +18,9 @@ class DatabaseSeeder extends Seeder
 
         // Bersihkan tabel
         \App\Models\Topic::truncate();
+        \App\Models\User::truncate();
+        \App\Models\QuestionBank::truncate();
+        \App\Models\Assignment::truncate();
 
         // Data Master
         $topics = [
@@ -38,5 +41,10 @@ class DatabaseSeeder extends Seeder
         }
 
         \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // Seed dosen, mahasiswa, soal, dan quiz contoh
+        $this->call([
+            AlinSeeder::class,
+        ]);
     }
 }
