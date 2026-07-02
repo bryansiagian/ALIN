@@ -43,7 +43,11 @@
                             </span>
                         </td>
                         <td class="px-5 py-3 text-right">
-                            <a href="{{ route('dosen.quizzes.detail', $quiz->id) }}" class="text-indigo-600 hover:underline text-xs font-medium">Detail</a>
+                            @if (\Illuminate\Support\Facades\Route::has('dosen.quizzes.detail'))
+                                <a href="{{ route('dosen.quizzes.detail', $quiz->id) }}" class="text-indigo-600 hover:underline text-xs font-medium">Detail</a>
+                            @else
+                                <span class="text-slate-300 text-xs">Detail (segera hadir)</span>
+                            @endif
                         </td>
                     </tr>
                 @empty
