@@ -14,7 +14,6 @@ class QuizCreate extends Component
 {
     use WithFileUploads;
 
-    public $topic_id = '';
     public $title = '';
     public $description = '';
     public $start_time = '';
@@ -58,7 +57,6 @@ class QuizCreate extends Component
     protected function rules()
     {
         return [
-            'topic_id' => 'required|exists:topics,id|not_in:6',
             'title' => 'required|string|max:255',
             'start_time' => 'required|date',
             'deadline' => 'required|date|after:start_time',
@@ -81,7 +79,7 @@ class QuizCreate extends Component
         DB::transaction(function () {
             $assignment = Assignment::create([
                 'lecturer_id' => auth()->id(),
-                'topic_id' => $this->topic_id,
+                'topic_id' => 1,
                 'title' => $this->title,
                 'description' => $this->description ?: '-',
                 'start_time' => $this->start_time,
@@ -121,7 +119,7 @@ class QuizCreate extends Component
                 }
 
                 $question = QuestionBank::create([
-                    'topic_id' => $this->topic_id,
+                    'topic_id' => 1,
                     'question_text' => $q['text'],
                     'question_image' => $questionImageUrl,
                     'question_type' => 'multiple_choice',
@@ -143,7 +141,6 @@ class QuizCreate extends Component
 
     public function render()
     {
-        $topics = Topic::where('id', '!=', 6)->where('is_active', true)->orderBy('order_index')->get();
         return view('livewire.dosen.quiz-create', compact('topics'))->layout('layouts.dosen');
     }
 }

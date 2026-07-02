@@ -11,16 +11,6 @@
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Topik</label>
-                    <select wire:model="topic_id" class="w-full rounded-lg border-slate-300 text-sm">
-                        <option value="">-- Pilih Topik --</option>
-                        @foreach ($topics as $topic)
-                            <option value="{{ $topic->id }}">{{ $topic->title }}</option>
-                        @endforeach
-                    </select>
-                    @error('topic_id') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
-                </div>
-                <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Judul Kuis</label>
                     <input type="text" wire:model="title" class="w-full rounded-lg border-slate-300 text-sm">
                     @error('title') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
